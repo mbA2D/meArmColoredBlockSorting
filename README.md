@@ -1,2 +1,4 @@
 # meArmColoredBlockSorting
-Eduardo - Add your code to this repository
+
+Library Dependencies:
+Adafruit VL6180X
