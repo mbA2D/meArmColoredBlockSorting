@@ -1,0 +1,12 @@
+Initialize all the sensors
+
+scan the area for the smallest distance
+Open claw
+Go to that angle and distance
+
+Grab the block
+find the color (or shape)
+
+Lift the block and go to the correct location
+Open the gripper, clear the block
+Repeat sorting the blocks
