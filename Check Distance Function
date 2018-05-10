@@ -1,0 +1,29 @@
+//Check Distance Function with adjusted parameters - returns block distance in mm
+int checkDistance(){
+ 
+  int range = 0;
+  for(int i = 0; i < 5; i++){
+    range += sensor.readRangeSingleMillimeters();
+  }
+  range /= 5;
+
+  if(SP)Serial.print(range);
+
+  if(range > 100 && range <= 150){
+    range = ((range - 100) * 1.58) + 100;
+  }
+  else if (range > 150){
+    range = ((range - 150) * 8) + 150;
+  }
+
+  if(SP)
+  {
+    Serial.print("   "); 
+    Serial.println(range);
+  }
+  
+  if (sensor.timeoutOccurred()) { if(SP)Serial.print(" TIMEOUT"); }
+  
+  //Serial.println();
+  return(range);
+}
