@@ -1,0 +1,40 @@
+
+int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;
+//read values from EEPROM instead.
+
+void setup() {
+  // put your setup code here, to run once:
+//initialze sensor
+  //and calibrate it
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+//get values, compare it
+  
+
+}
+
+char checkColor(int r, int g, int b){
+  
+  double diffR = sq(r-Rr) + sq(g-Rg) + sq(b-Rb);
+  double diffG = sq(r-Gr) + sq(g-Gg) + sq(b-Gb);
+  double diffB = sq(r-Br) + sq(g-Bg) + sq(b-Bb);
+  double diffK = sq(r-Kr) + sq(g-Kg) + sq(b-Kb);
+
+  double c = min(min(diffR, diffG), min(diffB, diffK));
+
+  if(c == diffR){
+    return 'r';
+  }
+  if(c == diffG){
+    return 'g';
+  }
+  if(c == diffB){
+    return 'b';
+  }
+  if(c == diffK){
+    return'k';
+  }
+  
+}
