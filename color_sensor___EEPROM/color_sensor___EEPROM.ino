@@ -1,10 +1,8 @@
 
 #include <EEPROM.h>
-#define S0 4
-#define S1 5
-#define S2 6
-#define S3 7
-#define sensorOut A0
+#define S2 4
+#define S3 3
+#define sensorOut 5
 
 int frequency_r = 0;
 int frequency_g = 0;
