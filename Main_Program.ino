@@ -17,9 +17,13 @@ meArmControlGit arm;
 #define S2 4
 #define S3 3
 #define sensorOut 5
+#define blockHeight 30
+#define armHeight 100
 int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;//Read values from EEPROM instead
 int r, g, b;
+int closestDegree, closestDistance;
 bool clawOpen = true;
+bool over = false;
 
 void setup() {
   Serial.begin(115200);
@@ -44,13 +48,13 @@ void loop() {
    k = calibrate black
    c = read color
    a = base radar CHECK
-   d = check distance CHECK
-   y = move y-axis CHECK
-   x = move x-axis CHECK
-   t = rotate CHECK
+   d = check distance 
+   m = move arm
    e = output EEPROM values
    w = change claw state
+   p = pick block
   */
+  if (!over){
   if(Serial.available()){
     switch(Serial.read()){
       case 'r':
@@ -74,37 +78,38 @@ void loop() {
         Serial.println(checkColor());
         break;
       case 'a':
-      Serial.println("Base radar");
+        Serial.println("Base radar");
+        radar();
+        arm.moveBaseServo(closestDegree);
         break;
       case 'd':
       Serial.println("Check distance");
+      checkDistance();
         break;
-      case 'x':
-      Serial.println("Type distance");
-        while(1){
-          if (Serial.available()){
-            Serial.println("move foward or backwards x cm");
-            break;
-          }
-        }
-        break;
-      case 'y':
+      case 'm':
+      int height, distance, degree;
       Serial.println("Type height");
         while(1){
           if (Serial.available()){
-            Serial.println("move up or down x cm");
+            height = Serial.parseInt();
             break;
           }
         }
-        break;
-      case 't':
+      Serial.println("Type distance");
+        while(1){
+          if (Serial.available()){
+            distance = Serial.parseInt();
+            break;
+          }
+        }
       Serial.println("Type degree");
       while(1){
           if (Serial.available()){
-            arm.moveBaseServo(Serial.parseInt());
+            degree = Serial.parseInt();
             break;
           }
         }
+        arm.moveArm(height, distance, degree);
         break;
       case 'e':
       Serial.println("EEPROM values:");
@@ -122,7 +127,44 @@ void loop() {
           clawOpen = true;
         }
         break;
+       case 't':
+         resetServos();
+         break;
+       case 'p':
+        int blockNum = 1;
+        Serial.println("Number of blocks: ");
+        while(1){
+          if(Serial.available()){
+            blockNum = Serial.parseInt();
+            break;
+          }
+        }
+       for (int k = 0; k < blockNum;k++){
+         radar();
+         arm.moveArm(armHeight, closestDistance -20 , closestDegree);
+         delay(500);
+        arm.moveArm(blockHeight, closestDistance -20 , closestDegree);
+         delay(1000);
+         arm.closeClaw();
+         clawOpen = false;
+         delay(1000);
+         Serial.println(checkColor());//DOESNT WORK RIGHT NOW
+         arm.moveArm(armHeight,closestDistance -30, closestDegree );
+         delay(500);
+         arm.moveArm(armHeight,armHeight,70 + k * 20);
+         delay(500);
+         arm.moveArm(blockHeight,armHeight,70 + k * 20);
+         delay(500);
+         arm.openClaw();
+         clawOpen = true;
+         delay(500);
+         arm.moveArm(armHeight,armHeight,70 + k * 20);
+         delay(500);
+         resetServos();
+       }
+         break;
     }
+  }
   }
 }
 
@@ -220,10 +262,56 @@ void readEEPROM(){
   Kb = EEPROM.read(12);
 }
 void resetServos(){
-  arm.moveBaseServo(0);
-  arm.moveGripperServo(90);
-  arm.moveShoulderServo(90);
-  arm.moveElbowServo(90);
+  arm.moveBaseServo(90);
+  arm.moveGripperServo(armHeight);
+  arm.moveShoulderServo(armHeight);
+  arm.moveElbowServo(armHeight);
   arm.openClaw();
+}
+int checkDistance(){
+ 
+  int range = 0;
+  for(int i = 0; i < 5; i++){
+    range += sensor.readRangeSingleMillimeters();
+  }
+  range /= 5;
+
+
+  if(range > 100 && range <= 150){
+    range = ((range - 100) * 1.58) + 100;
+  }
+  else if (range > 150){
+    range = ((range - 150) * 8) + 150;
+  }
+
+  if(SP)
+  {
+    Serial.print("Distance: "); 
+    Serial.println(range);
+  }
+  
+  if (sensor.timeoutOccurred()) { if(SP)Serial.print(" TIMEOUT"); }
+  
+  //Serial.println();
+  return(range);
+}
+void radar(){
+  int dist;
+  closestDistance = 500;
+  for (int v = 180-90; v <= 180; v+= 3){
+    arm.moveBaseServo(v);
+    dist = checkDistance();
+    if (dist < closestDistance && dist < 300){
+      closestDistance = dist;
+      closestDegree = v;
+      nothing = false;
+    }
+    delay(10);
+  }
+  if (closestDistance > 300){
+    closestDegree = 90;
+    Serial.println("END");
+    //over = true;
+  }
 }
 
