@@ -1,12 +1,12 @@
-#define BasePot A0
-#define DistancePot A1
-#define HeightPot A2
+#define baseManualPot A0
+#define distanceManualPot A1
+#define heightManualPot A2
 #define ClawSwitch A3
 
 #include "meArmControlGit.h"
 #include <Servo.h>
 
-#define basePin 6
+#define baseManualPin 6
 #define shoulderPin 10
 #define elbowPin 9
 #define gripperPin 11
@@ -22,19 +22,19 @@ int DPV = 0;
 int oldBPV = 0;
 int oldHPV = 0;
 int oldDPV = 0;
-int height = 0;
-int base = 0;
-int distance = 0;
+int heightManual = 0;
+int baseManual = 0;
+int distanceManual = 0;
 bool claw = OPEN;
 
 void setup() {
   // put your setup code here, to run once:
-pinMode(BasePot, INPUT);
-pinMode(DistancePot, INPUT);
-pinMode(HeightPot, INPUT);
+pinMode(baseManualPot, INPUT);
+pinMode(distanceManualPot, INPUT);
+pinMode(heightManualPot, INPUT);
 pinMode(ClawSwitch, INPUT_PULLUP);
 
-  arm.beginArm(basePin, shoulderPin, elbowPin, gripperPin);
+  arm.beginArm(baseManualPin, shoulderPin, elbowPin, gripperPin);
   delay(500);
   Serial.begin(115200);
   
@@ -51,13 +51,13 @@ void loop() {
   oldBPV = BPV;
   oldDPV = DPV;
 
-  HPV = analogRead(HeightPot);
-  BPV = analogRead(BasePot);
-  DPV = analogRead(DistancePot);
+  HPV = analogRead(heightManualPot);
+  BPV = analogRead(baseManualPot);
+  DPV = analogRead(distanceManualPot);
 
-  height = map(HPV, 0, 1023, 0, 160);
-   base = map(BPV, 0, 1023, 0, 180); 
-   distance = map(DPV, 0, 1023, 0, 160);
+  heightManual = map(HPV, 0, 1023, 0, 160);
+   baseManual = map(BPV, 0, 1023, 0, 180); 
+   distanceManual = map(DPV, 0, 1023, 0, 160);
 
   
 
@@ -72,13 +72,13 @@ void loop() {
   }
 
   if(canReach){
-    arm.moveArm(height, distance, base);
+    arm.moveArm(heightManual, distanceManual, baseManual);
   }
 
    
 }
 
 bool canReach(){
-  return(sqrt(sq(height) + sq(base)) >= 160);
+  return(sqrt(sq(heightManual) + sq(baseManual)) >= 160);
 }
 

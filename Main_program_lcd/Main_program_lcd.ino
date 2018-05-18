@@ -1,0 +1,672 @@
+#include <meArmControlGit.h>
+#include <LiquidCrystal_I2C.h>
+#include<EEPROM.h>
+#include <Servo.h>
+#include <Wire.h>
+#include <VL6180X.h>
+
+VL6180X sensor;
+meArmControlGit arm;
+LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
+
+#define basePot A0
+#define distancePot A1
+#define heightPot A2
+#define ClawSwitch A3
+#define basePin 6
+#define shoulderPin 10
+#define elbowPin 9
+#define gripperPin 11
+#define S2 4
+#define S3 3
+#define sensorOut 5
+#define blockHeight 30
+#define armHeight 100
+#define CLOSED false
+#define OPEN true
+
+long timer = 0;
+int y_arrow = 0;
+int screen[1];
+int deepness = 0;
+bool back, enter = false;
+int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;//Read values from EEPROM instead
+int r, g, b;
+int closestDegree, closestDistance;
+int blockNum = 1;
+bool clawOpen = true;
+bool over = false;
+bool working = false;
+bool manually = false;
+int HPV = 0;
+int BPV = 0;
+int DPV = 0;
+int heightManual = 0;
+int baseManual = 0;
+int distanceManual = 0;
+bool claw = OPEN;
+
+void setup() {
+  Serial.begin(115200);
+  arm.beginArm(basePin, shoulderPin, elbowPin, gripperPin);
+  delay(500);
+  Wire.begin();
+  sensor.init();
+  sensor.configureDefault();
+  sensor.setTimeout(500);
+  resetServos();
+  pinMode(S2, OUTPUT);
+  pinMode(S3, OUTPUT);
+  pinMode(sensorOut, INPUT);
+  pinMode(basePot, INPUT);
+  pinMode(distancePot, INPUT);
+  pinMode(heightPot, INPUT);
+  pinMode(ClawSwitch, INPUT_PULLUP);
+  readEEPROM();
+  lcd.begin();
+  lcd.home();
+  update_menu();
+}
+
+void loop() {
+  /*
+   r = calibrate red
+   g = calibrate green
+   b = calibrate blue
+   k = calibrate black
+   c = read color
+   a = base radar CHECK
+   d = check distance 
+   m = move arm
+   e = output EEPROM values
+   w = change claw state
+   s = pick and sort block
+   p = pick block
+   l = leave block
+  */
+    control_menu();
+    if (manually){
+      manualMove();
+    }
+}
+
+char checkColor(){
+  readColor();
+  /*double diffR = sq(r-Rr) + sq(g-Rg) + sq(b-Rb);
+  double diffG = sq(r-Gr) + sq(g-Gg) + sq(b-Gb);
+  double diffB = sq(r-Br) + sq(g-Bg) + sq(b-Bb);
+  double diffK = sq(r-Kr) + sq(g-Kg) + sq(b-Kb);
+
+  double c = min(min(diffR, diffG), min(diffB, diffK));
+
+  if(c == diffR){
+    return 'r';
+  }
+  if(c == diffG){
+    return 'g';
+  }
+  if(c == diffB){
+    return 'b';
+  }
+  if(c == diffK){
+    return'k';
+  }*/
+  if (r < Gr && r < Br && r < Kr){
+    return 'r';
+  }
+  else if (g < Rg && g < Bg && g < Kg){
+    return 'g';
+  }
+  else if (b < Rb && b < Gb && b < Kb){
+    return 'b';
+  }
+  else{
+    return 'k';
+  }
+}
+void readColor(){
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,LOW);
+  // Reading the output frequency
+  r = pulseIn(sensorOut, LOW);
+  // Printing the value on the serial monitor
+  Serial.print("R= ");//printing name
+  Serial.print(r);//printing RED color frequency
+  Serial.print("  ");
+  delay(100);
+  // Setting Green filtered photodiodes to be read
+  digitalWrite(S2,HIGH);
+  digitalWrite(S3,HIGH);
+  // Reading the output frequency
+  g = pulseIn(sensorOut, LOW);
+  // Printing the value on the serial monitor
+  Serial.print("G= ");//printing name
+  Serial.print(g);//printing GREEN color frequency
+  Serial.print("  ");
+  delay(100);
+  // Setting Blue filtered photodiodes to be read
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  // Reading the output frequency
+  b = pulseIn(sensorOut, LOW);
+  // Printing the value on the serial monitor
+  Serial.print("B= ");//printing name
+  Serial.println(b);//printing BLUE color frequency
+  if (r > 255){
+    r = 255;
+  }
+  if (g > 255){
+    g = 255;
+  }
+  if (b > 255){
+    b = 255;
+  }
+}
+void calibrateRed(){
+  readColor();
+  EEPROM.update(1,r);
+  EEPROM.update(2,g);
+  EEPROM.update(3,b);
+  readEEPROM();
+}
+void calibrateGreen(){
+  readColor();
+  EEPROM.update(4,r);
+  EEPROM.update(5,g);
+  EEPROM.update(6,b);
+  readEEPROM();
+}
+void calibrateBlue(){
+  readColor();
+  EEPROM.update(7,r);
+  EEPROM.update(8,g);
+  EEPROM.update(9,b);
+  readEEPROM();
+}
+void calibrateBlack(){
+  readColor();
+  EEPROM.update(10,r);
+  EEPROM.update(11,g);
+  EEPROM.update(12,b);
+  readEEPROM();
+}
+void readEEPROM(){
+  Rr = EEPROM.read(1);
+  Rg = EEPROM.read(2);
+  Rb = EEPROM.read(3);
+  Gr = EEPROM.read(4);
+  Gg = EEPROM.read(5);
+  Gb = EEPROM.read(6);
+  Br = EEPROM.read(7);
+  Bg = EEPROM.read(8);
+  Bb = EEPROM.read(9);
+  Kr = EEPROM.read(10);
+  Kg = EEPROM.read(11);
+  Kb = EEPROM.read(12);
+}
+void resetServos(){
+  arm.moveBaseServo(90);
+  arm.moveGripperServo(armHeight);
+  arm.moveShoulderServo(armHeight);
+  arm.moveElbowServo(armHeight);
+  arm.openClaw();
+}
+int checkDistance(){
+ 
+  int range = 0;
+  for(int i = 0; i < 5; i++){
+    range += sensor.readRangeSingleMillimeters();
+  }
+  range /= 5;
+
+
+  if(range > 100 && range <= 150){
+    range = ((range - 100) * 1.58) + 100;
+  }
+  else if (range > 150){
+    range = ((range - 150) * 8) + 150;
+  }
+
+  if(SP)
+  {
+    Serial.print("Distance: "); 
+    Serial.println(range);
+  }
+  
+  if (sensor.timeoutOccurred()) { if(SP)Serial.print(" TIMEOUT"); }
+  
+  //Serial.println();
+  return(range);
+}
+void radar(){
+  int dist;
+  closestDistance = 700;
+  for (int v = 135; v <= 180; v+= 3){
+    arm.moveBaseServo(v);
+    dist = checkDistance();
+    if (dist < closestDistance && dist < 600){
+      closestDistance = dist;
+      closestDegree = v;
+    }
+    delay(10);
+  }
+  if (closestDistance > 300){
+    closestDegree = 90;
+    over = true;
+  }
+}
+void control_menu(){
+  if (Serial.available()){
+    if (!working){
+    switch(Serial.read()){
+      case 'u':
+      y_arrow--;
+      break;
+      case 'd':
+      y_arrow++;
+      break;
+      case 'e':
+      enter = true;
+      break;
+      case 'b':
+      back = true;
+      break;
+    }
+    }
+    if (Serial.read() == 'b'){
+      back = true;
+    }
+    fix_position();
+    update_menu();
+  }
+}
+void fix_position(){
+  if (y_arrow < 0){
+    y_arrow = 3;
+  }
+  if (y_arrow > 3){
+    y_arrow = 0;
+  }
+}
+void update_menu(){
+  if(working && back){
+    working = false;
+    lcd.clear();
+    draw_menu();
+    back = false;
+    manually = false;
+  }
+  else if (!working){
+    lcd.clear();
+    enter_menu();
+    if (!working){
+    draw_menu();
+    }
+  }
+}
+void draw_menu(){
+  lcd.setCursor(0,y_arrow);
+  lcd.print("==>");
+  switch(deepness){
+    case 0:
+    lcd.setCursor(3,0);
+    lcd.print("COLOR");
+    lcd.setCursor(3,1);
+    lcd.print("MOVEMENT");
+    lcd.setCursor(3,2);
+    lcd.print("CHECK POSITION");
+    lcd.setCursor(3,3);
+    lcd.print("CHECK DISTANCE");
+    break;
+    case 1:
+      switch(screen[0]){
+        case 0:
+          lcd.setCursor(3,0);
+          lcd.print("CALIBRATE");
+          lcd.setCursor(3,1);
+          lcd.print("READ COLOR");
+          lcd.setCursor(3,2);
+          lcd.print("EEPROM VALUES");
+          break;
+        case 1:
+          lcd.setCursor(3,0);
+          lcd.print("MOVE MANUALLY");
+          lcd.setCursor(3,1);
+          lcd.print("AUTOMATIC");
+          lcd.setCursor(3,2);
+          lcd.print("OPEN/CLOSE CLAW");
+          lcd.setCursor(3,3);
+          lcd.print("RESET SERVOS");
+          break;
+      }
+      break;
+    case 2:
+      switch(screen[0]){
+        case 0:
+          lcd.setCursor(3,0);
+          lcd.print("CALIBRATE RED");
+          lcd.setCursor(3,1);
+          lcd.print("CALIBRATE BLUE");
+          lcd.setCursor(3,2);
+          lcd.print("CALIBRATE GREEN");
+          lcd.setCursor(3,3);
+          lcd.print("CALIBRATE BLACK");
+          break;
+        case 1:
+          lcd.setCursor(3,0);
+          lcd.print("RADAR");
+          lcd.setCursor(3,1);
+          lcd.print("PICK");
+          lcd.setCursor(3,2);
+          lcd.print("LEAVE");
+          lcd.setCursor(3,3);
+          lcd.print("SORT");
+          break;
+      }
+      break;
+  }
+}
+void enter_menu(){
+  switch(deepness){
+    case 0:
+    if (enter){
+      switch (y_arrow){
+        case 0:
+          deepness++;
+          screen[0] = 0;
+          break;
+        case 1:
+          deepness++;
+          screen[0] = 1;
+          break;
+        case 2:
+          Serial.println("Check position");//HELP
+          lcd.setCursor(0,0);
+          lcd.print("Distance: ");//ACTUAL DISTANCE
+          lcd.setCursor(0,1);
+          lcd.print("Height: ");//ACTUAL HEIGHT
+          lcd.setCursor(0,2);
+          lcd.print("Degree: ");//ACTUAL DEGREE
+          working = true;
+          break;
+        case 3:
+          Serial.println("Check distance");//HELP
+          lcd.setCursor(0,0);
+          lcd.print("Distance: ");
+          lcd.print(checkDistance());
+          lcd.setCursor(0,2);
+          lcd.print("Degree: ");//ACTUAL DEGREE
+          working = true;
+          break;
+      }
+    }
+    break;
+    case 1:
+      switch(screen[0]){
+        case 0:
+          if (enter){
+            switch(y_arrow){
+              case 0:
+                deepness++;
+                break;
+              case 1:
+                Serial.println("Read color");
+                char colorSensor;
+                colorSensor= checkColor();
+                lcd.setCursor(0,0);
+                lcd.print("R= ");
+                lcd.print(r);
+                lcd.setCursor(0,1);
+                lcd.print("G= ");
+                lcd.print(g);
+                lcd.setCursor(0,2);
+                lcd.print("B= ");
+                lcd.print(b);
+                lcd.setCursor(0,3);
+                lcd.print("Color: ");
+                lcd.print(colorSensor);
+                working = true;
+                break;
+              case 2:
+                Serial.println("EEPROM values");
+                lcd.setCursor(0,0);
+                lcd.print("Rr:");
+                lcd.print(EEPROM.read(1));
+                lcd.setCursor(0,1);
+                lcd.print("Rg:");
+                lcd.print(EEPROM.read(2));
+                lcd.setCursor(0,2);
+                lcd.print("Rb:");
+                lcd.print(EEPROM.read(3));
+                lcd.setCursor(7,0);
+                lcd.print("Gr:");
+                lcd.print(EEPROM.read(4));
+                lcd.setCursor(7,1);
+                lcd.print("Gg:");
+                lcd.print(EEPROM.read(5));
+                lcd.setCursor(7,2);
+                lcd.print("Gb:");
+                lcd.print(EEPROM.read(6));
+                lcd.setCursor(14,0);
+                lcd.print("Br:");
+                lcd.print(EEPROM.read(7));
+                lcd.setCursor(14,1);
+                lcd.print("Bg:");
+                lcd.print(EEPROM.read(8));
+                lcd.setCursor(14,2);
+                lcd.print("Bb:");
+                lcd.print(EEPROM.read(9));
+                lcd.setCursor(0,3);
+                lcd.print("Kr:");
+                lcd.print(EEPROM.read(10));
+                lcd.setCursor(7,3);
+                lcd.print("Kg:");
+                lcd.print(EEPROM.read(11));
+                lcd.setCursor(14,3);
+                lcd.print("Kb:");
+                lcd.print(EEPROM.read(12));
+                working = true;
+                break;
+            }
+          }
+          break;
+        case 1:
+          if (enter){
+            switch(y_arrow){
+              case 0:
+                Serial.println("Move manually");
+                lcd.setCursor(0,0);
+                lcd.print("Distance: ");
+                lcd.setCursor(0,1);
+                lcd.print("Height: ");
+                lcd.setCursor(0,2);
+                lcd.print("Degree: ");
+                manually = true;
+                working = true;
+                break;
+              case 1:
+                deepness++;
+                break;
+              case 2:
+                Serial.println("Open/close claw");
+                if (clawOpen){
+                  arm.closeClaw();
+                  clawOpen = false;
+                }
+                 else if (!clawOpen){
+                  arm.openClaw();
+                  clawOpen = true;
+                 }
+                break;
+              case 3:
+                Serial.println("Reset servos");
+                resetServos();
+                break;
+            }
+          }
+          break;
+      }
+      if (back){
+         deepness--;
+      }
+      break;
+    case 2:
+      switch(screen[0]){
+        case 0:
+          if (enter){
+            switch (y_arrow){
+              case 0:
+                Serial.println("Calibrate red");
+                calibrateRed();
+                break;
+              case 1:
+                Serial.println("Calibrate blue");
+                calibrateBlue();
+                break;
+              case 2:
+                Serial.println("Calibrate green");
+                calibrateGreen();
+                break;
+              case 3:
+                Serial.println("Calibrate black");
+                calibrateBlack();
+                break;
+            }
+            lcd.setCursor(0,0);
+            lcd.print("R= ");
+            lcd.print(r);
+            lcd.setCursor(0,1);
+            lcd.print("G= ");
+            lcd.print(g);
+            lcd.setCursor(0,2);
+            lcd.print("B= ");
+            lcd.print(b);
+            working = true;
+          }
+          break;
+        case 1:
+          if (enter){
+            switch (y_arrow){
+              case 0:
+                Serial.println("Radar");
+                radar();
+                arm.moveBaseServo(closestDegree);
+                lcd.setCursor(0,0);
+                lcd.print("Degree: ");
+                lcd.print(closestDegree);
+                lcd.setCursor(0,2);
+                lcd.print("Distance: ");
+                lcd.print(closestDistance);
+                working = true;
+                break;
+              case 1:
+                Serial.println("Pick");
+                pick();
+                break;
+              case 2:
+                Serial.println("Leave");
+                leave();
+                break;
+              case 3:
+                Serial.println("Sort");
+                do {
+                pick();
+                if (over){
+                  break;
+                }
+                leave();
+                } while (!over);
+                over = false;
+                break;
+            }
+          } 
+          break;
+      }
+      if (back){
+        deepness--;
+      }
+      break;
+  }
+  enter = false;
+  back = false;
+}
+void pick(){
+  radar();
+  if (!over){
+         arm.moveArm(armHeight, 70 , closestDegree);
+         delay(500);
+         arm.moveArm(blockHeight, closestDistance -20 , closestDegree);
+         delay(500);
+         arm.closeClaw();
+         clawOpen = false;
+         delay(500);
+         Serial.println(checkColor());//DOESNT WORK RIGHT NOW
+         arm.moveArm(armHeight,closestDistance -20, closestDegree );
+  }
+}
+void leave(){
+  int colorDegree;
+  switch(checkColor()){
+    case 'k':
+      colorDegree = closestDegree;
+      break;
+    case 'g':
+      colorDegree = 100;
+      break;
+    case 'b':
+      colorDegree = 70;
+      break;
+    case 'r':
+      colorDegree = 20;
+      break;
+  }
+  delay(500);
+         arm.moveArm(armHeight,armHeight,colorDegree);
+         delay(500);
+         arm.moveArm(blockHeight,armHeight,colorDegree);
+         delay(500);
+         arm.openClaw();
+         clawOpen = true;
+         delay(500);
+         arm.moveArm(armHeight,armHeight,colorDegree);
+         delay(500);
+         resetServos();
+}
+void manualMove(){
+    if(!digitalRead(ClawSwitch))
+    arm.openClaw();
+  else
+    arm.closeClaw();
+
+  HPV = analogRead(heightPot);
+  BPV = analogRead(basePot);
+  DPV = analogRead(distancePot);
+
+  heightManual = map(HPV, 0, 1023, 0, 160);
+   baseManual = map(BPV, 0, 1023, 0, 180); 
+   distanceManual = map(DPV, 0, 1023, 0, 160);
+   
+   if(canReach){
+    if (millis() - timer > 1000){
+      timer = millis();
+      lcd.setCursor(10,0);
+      lcd.print("   ");
+      lcd.setCursor(10,0);
+      lcd.print(distanceManual);
+      lcd.setCursor(8,1);
+      lcd.print("   ");
+      lcd.setCursor(8,1);
+      lcd.print(heightManual);
+      lcd.setCursor(8,2);
+      lcd.print("   ");
+      lcd.setCursor(8,2);
+      lcd.print(baseManual);
+    }
+    arm.moveArm(heightManual, distanceManual, baseManual);
+  }
+}
+bool canReach(){
+  return(sqrt(sq(heightManual) + sq(baseManual)) >= 160);
+}
+
+
