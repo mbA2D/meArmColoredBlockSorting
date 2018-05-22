@@ -1,6 +1,6 @@
+#include <EEPROMex.h>
 #include <meArmControlGit.h>
 #include <LiquidCrystal_I2C.h>
-#include<EEPROM.h>
 #include <Servo.h>
 #include <Wire.h>
 #include <VL6180X.h>
@@ -22,8 +22,6 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define sensorOut 5
 #define blockHeight 30
 #define armHeight 100
-#define CLOSED false
-#define OPEN true
 #define UpButton 7
 #define DownButton 8
 #define BackButton 2
@@ -31,26 +29,19 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define ButtonDelay 300
 #define LedPin 13
 
-long timer = 0;
 int y_arrow = 0;
-int screen[1];
-int deepness = 0;
+byte screen;
+byte deepness = 0;
 bool back, enter = false;
-int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;//Read values from EEPROM instead
+int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;
 int r, g, b;
-int closestDegree, closestDistance;
-int blockNum = 1;
+byte closestDegree; 
+int closestDistance;
 bool clawOpen = true;
 bool over = false;
 bool working = false;
 bool manually = false;
-int HPV = 0;
-int BPV = 0;
-int DPV = 0;
-int heightManual = 0;
-int baseManual = 0;
-int distanceManual = 0;
-bool claw = OPEN;
+bool manualOnce = false;
 long lastButtonMillis;
 
 
@@ -79,7 +70,6 @@ void setup() {
   pinMode(DownButton, INPUT_PULLUP);
   pinMode(EnterButton, INPUT_PULLUP);
   lastButtonMillis = millis();
-  timer = millis();
   readEEPROM();
   lcd.begin();
   lcd.home();
@@ -87,21 +77,6 @@ void setup() {
 }
 
 void loop() {
-  /*
-   r = calibrate red
-   g = calibrate green
-   b = calibrate blue
-   k = calibrate black
-   c = read color
-   a = base radar CHECK
-   d = check distance 
-   m = move arm
-   e = output EEPROM values
-   w = change claw state
-   s = pick and sort block
-   p = pick block
-   l = leave block
-  */
     control_menu();
     if (manually){
       manualMove();
@@ -172,58 +147,49 @@ void readColor(){
   // Printing the value on the serial monitor
   Serial.print("B= ");//printing name
   Serial.println(b);//printing BLUE color frequency
-  if (r > 255){
-    r = 255;
-  }
-  if (g > 255){
-    g = 255;
-  }
-  if (b > 255){
-    b = 255;
-  }
   digitalWrite(LedPin, LOW);
 }
 void calibrateRed(){
   readColor();
-  EEPROM.update(1,r);
-  EEPROM.update(2,g);
-  EEPROM.update(3,b);
+  EEPROM.updateInt(1,r);
+  EEPROM.updateInt(2,g);
+  EEPROM.updateInt(3,b);
   readEEPROM();
 }
 void calibrateGreen(){
   readColor();
-  EEPROM.update(4,r);
-  EEPROM.update(5,g);
-  EEPROM.update(6,b);
+  EEPROM.updateInt(4,r);
+  EEPROM.updateInt(5,g);
+  EEPROM.updateInt(6,b);
   readEEPROM();
 }
 void calibrateBlue(){
   readColor();
-  EEPROM.update(7,r);
-  EEPROM.update(8,g);
-  EEPROM.update(9,b);
+  EEPROM.updateInt(7,r);
+  EEPROM.updateInt(8,g);
+  EEPROM.updateInt(9,b);
   readEEPROM();
 }
 void calibrateBlack(){
   readColor();
-  EEPROM.update(10,r);
-  EEPROM.update(11,g);
-  EEPROM.update(12,b);
+  EEPROM.updateInt(10,r);
+  EEPROM.updateInt(11,g);
+  EEPROM.updateInt(12,b);
   readEEPROM();
 }
 void readEEPROM(){
-  Rr = EEPROM.read(1);
-  Rg = EEPROM.read(2);
-  Rb = EEPROM.read(3);
-  Gr = EEPROM.read(4);
-  Gg = EEPROM.read(5);
-  Gb = EEPROM.read(6);
-  Br = EEPROM.read(7);
-  Bg = EEPROM.read(8);
-  Bb = EEPROM.read(9);
-  Kr = EEPROM.read(10);
-  Kg = EEPROM.read(11);
-  Kb = EEPROM.read(12);
+  Rr = EEPROM.readInt(1);
+  Rg = EEPROM.readInt(2);
+  Rb = EEPROM.readInt(3);
+  Gr = EEPROM.readInt(4);
+  Gg = EEPROM.readInt(5);
+  Gb = EEPROM.readInt(6);
+  Br = EEPROM.readInt(7);
+  Bg = EEPROM.readInt(8);
+  Bb = EEPROM.readInt(9);
+  Kr = EEPROM.readInt(10);
+  Kg = EEPROM.readInt(11);
+  Kb = EEPROM.readInt(12);
 }
 void resetServos(){
   arm.moveBaseServo(90);
@@ -362,7 +328,7 @@ void draw_menu(){
     lcd.print("CHECK DISTANCE");
     break;
     case 1:
-      switch(screen[0]){
+      switch(screen){
         case 0:
           lcd.setCursor(3,0);
           lcd.print("CALIBRATE");
@@ -384,7 +350,7 @@ void draw_menu(){
       }
       break;
     case 2:
-      switch(screen[0]){
+      switch(screen){
         case 0:
           lcd.setCursor(3,0);
           lcd.print("CALIBRATE RED");
@@ -416,11 +382,11 @@ void enter_menu(){
       switch (y_arrow){
         case 0:
           deepness++;
-          screen[0] = 0;
+          screen = 0;
           break;
         case 1:
           deepness++;
-          screen[0] = 1;
+          screen = 1;
           break;
         case 2:
           Serial.println("Check position");
@@ -449,7 +415,7 @@ void enter_menu(){
     }
     break;
     case 1:
-      switch(screen[0]){
+      switch(screen){
         case 0:
           if (enter){
             switch(y_arrow){
@@ -478,40 +444,40 @@ void enter_menu(){
                 Serial.println("EEPROM values");
                 lcd.setCursor(0,0);
                 lcd.print("Rr:");
-                lcd.print(EEPROM.read(1));
+                lcd.print(EEPROM.readInt(1));
                 lcd.setCursor(0,1);
                 lcd.print("Rg:");
-                lcd.print(EEPROM.read(2));
+                lcd.print(EEPROM.readInt(2));
                 lcd.setCursor(0,2);
                 lcd.print("Rb:");
-                lcd.print(EEPROM.read(3));
+                lcd.print(EEPROM.readInt(3));
                 lcd.setCursor(7,0);
                 lcd.print("Gr:");
-                lcd.print(EEPROM.read(4));
+                lcd.print(EEPROM.readInt(4));
                 lcd.setCursor(7,1);
                 lcd.print("Gg:");
-                lcd.print(EEPROM.read(5));
+                lcd.print(EEPROM.readInt(5));
                 lcd.setCursor(7,2);
                 lcd.print("Gb:");
-                lcd.print(EEPROM.read(6));
+                lcd.print(EEPROM.readInt(6));
                 lcd.setCursor(14,0);
                 lcd.print("Br:");
-                lcd.print(EEPROM.read(7));
+                lcd.print(EEPROM.readInt(7));
                 lcd.setCursor(14,1);
                 lcd.print("Bg:");
-                lcd.print(EEPROM.read(8));
+                lcd.print(EEPROM.readInt(8));
                 lcd.setCursor(14,2);
                 lcd.print("Bb:");
-                lcd.print(EEPROM.read(9));
+                lcd.print(EEPROM.readInt(9));
                 lcd.setCursor(0,3);
                 lcd.print("Kr:");
-                lcd.print(EEPROM.read(10));
+                lcd.print(EEPROM.readInt(10));
                 lcd.setCursor(7,3);
                 lcd.print("Kg:");
-                lcd.print(EEPROM.read(11));
+                lcd.print(EEPROM.readInt(11));
                 lcd.setCursor(14,3);
                 lcd.print("Kb:");
-                lcd.print(EEPROM.read(12));
+                lcd.print(EEPROM.readInt(12));
                 working = true;
                 break;
             }
@@ -555,10 +521,11 @@ void enter_menu(){
       }
       if (back){
          deepness--;
+         manualOnce = false;
       }
       break;
     case 2:
-      switch(screen[0]){
+      switch(screen){
         case 0:
           if (enter){
             switch (y_arrow){
@@ -680,21 +647,26 @@ void leave(){
          resetServos();
 }
 void manualMove(){
+  long timer;
     if(!digitalRead(ClawSwitch))
     arm.openClaw();
   else
     arm.closeClaw();
 
-  HPV = analogRead(heightPot);
-  BPV = analogRead(basePot);
-  DPV = analogRead(distancePot);
+  int HPV = analogRead(heightPot);
+  int BPV = analogRead(basePot);
+  int DPV = analogRead(distancePot);
 
-  heightManual = map(HPV, 0, 1023, 0, 160);
-   baseManual = map(BPV, 0, 1023, 0, 180); 
-   distanceManual = map(DPV, 0, 1023, 0, 160);
+  int heightManual = map(HPV, 0, 1023, 0, 160);
+  int baseManual = map(BPV, 0, 1023, 0, 180); 
+  int distanceManual = map(DPV, 0, 1023, 0, 160);
    
-   if(canReach){
-    if (millis() - timer > 1000){
+   if(canReach(heightManual, baseManual, distanceManual)){
+    if(!manualOnce){
+    manualOnce = true;
+    timer = millis();
+    }
+    else if (millis() - timer > 1000){
       timer = millis();
       lcd.setCursor(10,0);
       lcd.print("   ");
@@ -712,7 +684,7 @@ void manualMove(){
     arm.moveArm(heightManual, distanceManual, baseManual);
   }
 }
-bool canReach(){
+bool canReach(int heightManual,int baseManual,int distanceManual){
   return(sqrt(sq(heightManual) + sq(baseManual)) >= 160);
 }
 
