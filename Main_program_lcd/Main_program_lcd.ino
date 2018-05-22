@@ -216,11 +216,11 @@ int checkDistance(){
 
   if(SP)
   {
-    Serial.print("Distance: "); 
+    Serial.print(F("Distance: ")); 
     Serial.println(range);
   }
   
-  if (sensor.timeoutOccurred()) { if(SP)Serial.print(" TIMEOUT"); }
+  if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
   
   //Serial.println();
   return(range);
@@ -315,37 +315,37 @@ void update_menu(){
 }
 void draw_menu(){
   lcd.setCursor(0,y_arrow);
-  lcd.print("==>");
+  lcd.print(F("==>"));
   switch(deepness){
     case 0:
     lcd.setCursor(3,0);
-    lcd.print("COLOR");
+    lcd.print(F("COLOR"));
     lcd.setCursor(3,1);
-    lcd.print("MOVEMENT");
+    lcd.print(F("MOVEMENT"));
     lcd.setCursor(3,2);
-    lcd.print("CHECK POSITION");
+    lcd.print(F("CHECK POSITION"));
     lcd.setCursor(3,3);
-    lcd.print("CHECK DISTANCE");
+    lcd.print(F("CHECK DISTANCE"));
     break;
     case 1:
       switch(screen){
         case 0:
           lcd.setCursor(3,0);
-          lcd.print("CALIBRATE");
+          lcd.print(F("CALIBRATE"));
           lcd.setCursor(3,1);
-          lcd.print("READ COLOR");
+          lcd.print(F("READ COLOR"));
           lcd.setCursor(3,2);
-          lcd.print("EEPROM VALUES");
+          lcd.print(F("EEPROM VALUES"));
           break;
         case 1:
           lcd.setCursor(3,0);
-          lcd.print("MOVE MANUALLY");
+          lcd.print(F("MOVE MANUALLY"));
           lcd.setCursor(3,1);
-          lcd.print("AUTOMATIC");
+          lcd.print(F("AUTOMATIC"));
           lcd.setCursor(3,2);
-          lcd.print("OPEN/CLOSE CLAW");
+          lcd.print(F("OPEN/CLOSE CLAW"));
           lcd.setCursor(3,3);
-          lcd.print("RESET SERVOS");
+          lcd.print(F("RESET SERVOS"));
           break;
       }
       break;
@@ -353,23 +353,23 @@ void draw_menu(){
       switch(screen){
         case 0:
           lcd.setCursor(3,0);
-          lcd.print("CALIBRATE RED");
+          lcd.print(F("CALIBRATE RED"));
           lcd.setCursor(3,1);
-          lcd.print("CALIBRATE BLUE");
+          lcd.print(F("CALIBRATE BLUE"));
           lcd.setCursor(3,2);
-          lcd.print("CALIBRATE GREEN");
+          lcd.print(F("CALIBRATE GREEN"));
           lcd.setCursor(3,3);
-          lcd.print("CALIBRATE BLACK");
+          lcd.print(F("CALIBRATE BLACK"));
           break;
         case 1:
           lcd.setCursor(3,0);
-          lcd.print("RADAR");
+          lcd.print(F("RADAR"));
           lcd.setCursor(3,1);
-          lcd.print("PICK");
+          lcd.print(F("PICK"));
           lcd.setCursor(3,2);
-          lcd.print("LEAVE");
+          lcd.print(F("LEAVE"));
           lcd.setCursor(3,3);
-          lcd.print("SORT");
+          lcd.print(F("SORT"));
           break;
       }
       break;
@@ -389,25 +389,25 @@ void enter_menu(){
           screen = 1;
           break;
         case 2:
-          Serial.println("Check position");
+          Serial.println(F("Check position"));
           lcd.setCursor(0,0);
-          lcd.print("Distance: ");
+          lcd.print(F("Distance: "));
           lcd.print(arm.getDistance());
           lcd.setCursor(0,1);
-          lcd.print("Height: ");
+          lcd.print(F("Height: "));
           lcd.print(arm.getHeight());
           lcd.setCursor(0,2);
-          lcd.print("Degree: ");
+          lcd.print(F("Degree: "));
           lcd.print(arm.getBase());
           working = true;
           break;
         case 3:
-          Serial.println("Check distance");
+          Serial.println(F("Check distance"));
           lcd.setCursor(0,0);
-          lcd.print("Distance: ");
+          lcd.print(F("Distance: "));
           lcd.print(checkDistance());
           lcd.setCursor(0,2);
-          lcd.print("Degree: ");
+          lcd.print(F("Degree: "));
           lcd.print(arm.getBase());
           working = true;
           break;
@@ -423,60 +423,60 @@ void enter_menu(){
                 deepness++;
                 break;
               case 1:
-                Serial.println("Read color");
+                Serial.println(F("Read color"));
                 char colorSensor;
                 colorSensor= checkColor();
                 lcd.setCursor(0,0);
-                lcd.print("R= ");
+                lcd.print(F("R= "));
                 lcd.print(r);
                 lcd.setCursor(0,1);
-                lcd.print("G= ");
+                lcd.print(F("G= "));
                 lcd.print(g);
                 lcd.setCursor(0,2);
-                lcd.print("B= ");
+                lcd.print(F("B= "));
                 lcd.print(b);
                 lcd.setCursor(0,3);
-                lcd.print("Color: ");
+                lcd.print(F("Color: "));
                 lcd.print(colorSensor);
                 working = true;
                 break;
               case 2:
-                Serial.println("EEPROM values");
+                Serial.println(F("EEPROM values"));
                 lcd.setCursor(0,0);
-                lcd.print("Rr:");
+                lcd.print(F("Rr:"));
                 lcd.print(EEPROM.readInt(1));
                 lcd.setCursor(0,1);
-                lcd.print("Rg:");
+                lcd.print(F("Rg:"));
                 lcd.print(EEPROM.readInt(2));
                 lcd.setCursor(0,2);
-                lcd.print("Rb:");
+                lcd.print(F("Rb:"));
                 lcd.print(EEPROM.readInt(3));
                 lcd.setCursor(7,0);
-                lcd.print("Gr:");
+                lcd.print(F("Gr:"));
                 lcd.print(EEPROM.readInt(4));
                 lcd.setCursor(7,1);
-                lcd.print("Gg:");
+                lcd.print(F("Gg:"));
                 lcd.print(EEPROM.readInt(5));
                 lcd.setCursor(7,2);
-                lcd.print("Gb:");
+                lcd.print(F("Gb:"));
                 lcd.print(EEPROM.readInt(6));
                 lcd.setCursor(14,0);
-                lcd.print("Br:");
+                lcd.print(F("Br:"));
                 lcd.print(EEPROM.readInt(7));
                 lcd.setCursor(14,1);
-                lcd.print("Bg:");
+                lcd.print(F("Bg:"));
                 lcd.print(EEPROM.readInt(8));
                 lcd.setCursor(14,2);
-                lcd.print("Bb:");
+                lcd.print(F("Bb:"));
                 lcd.print(EEPROM.readInt(9));
                 lcd.setCursor(0,3);
-                lcd.print("Kr:");
+                lcd.print(F("Kr:"));
                 lcd.print(EEPROM.readInt(10));
                 lcd.setCursor(7,3);
-                lcd.print("Kg:");
+                lcd.print(F("Kg:"));
                 lcd.print(EEPROM.readInt(11));
                 lcd.setCursor(14,3);
-                lcd.print("Kb:");
+                lcd.print(F("Kb:"));
                 lcd.print(EEPROM.readInt(12));
                 working = true;
                 break;
@@ -487,13 +487,13 @@ void enter_menu(){
           if (enter){
             switch(y_arrow){
               case 0:
-                Serial.println("Move manually");
+                Serial.println(F("Move manually"));
                 lcd.setCursor(0,0);
-                lcd.print("Distance: ");
+                lcd.print(F("Distance: "));
                 lcd.setCursor(0,1);
-                lcd.print("Height: ");
+                lcd.print(F("Height: "));
                 lcd.setCursor(0,2);
-                lcd.print("Degree: ");
+                lcd.print(F("Degree: "));
                 manually = true;
                 working = true;
                 break;
@@ -501,7 +501,7 @@ void enter_menu(){
                 deepness++;
                 break;
               case 2:
-                Serial.println("Open/close claw");
+                Serial.println(F("Open/close claw"));
                 if (clawOpen){
                   arm.closeClaw();
                   clawOpen = false;
@@ -512,7 +512,7 @@ void enter_menu(){
                  }
                 break;
               case 3:
-                Serial.println("Reset servos");
+                Serial.println(F("Reset servos"));
                 resetServos();
                 break;
             }
@@ -530,30 +530,30 @@ void enter_menu(){
           if (enter){
             switch (y_arrow){
               case 0:
-                Serial.println("Calibrate red");
+                Serial.println(F("Calibrate red"));
                 calibrateRed();
                 break;
               case 1:
-                Serial.println("Calibrate blue");
+                Serial.println(F("Calibrate blue"));
                 calibrateBlue();
                 break;
               case 2:
-                Serial.println("Calibrate green");
+                Serial.println(F("Calibrate green"));
                 calibrateGreen();
                 break;
               case 3:
-                Serial.println("Calibrate black");
+                Serial.println(F("Calibrate black"));
                 calibrateBlack();
                 break;
             }
             lcd.setCursor(0,0);
-            lcd.print("R= ");
+            lcd.print(F("R= "));
             lcd.print(r);
             lcd.setCursor(0,1);
-            lcd.print("G= ");
+            lcd.print(F("G= "));
             lcd.print(g);
             lcd.setCursor(0,2);
-            lcd.print("B= ");
+            lcd.print(F("B= "));
             lcd.print(b);
             working = true;
           }
@@ -562,27 +562,27 @@ void enter_menu(){
           if (enter){
             switch (y_arrow){
               case 0:
-                Serial.println("Radar");
+                Serial.println(F("Radar"));
                 radar();
                 arm.moveBaseServo(closestDegree);
                 lcd.setCursor(0,0);
-                lcd.print("Degree: ");
+                lcd.print(F("Degree: "));
                 lcd.print(closestDegree);
                 lcd.setCursor(0,2);
-                lcd.print("Distance: ");
+                lcd.print(F("Distance: "));
                 lcd.print(closestDistance);
                 working = true;
                 break;
               case 1:
-                Serial.println("Pick");
+                Serial.println(F("Pick"));
                 pick();
                 break;
               case 2:
-                Serial.println("Leave");
+                Serial.println(F("Leave"));
                 leave();
                 break;
               case 3:
-                Serial.println("Sort");
+                Serial.println(F("Sort"));
                 do {
                 pick();
                 if (over){
