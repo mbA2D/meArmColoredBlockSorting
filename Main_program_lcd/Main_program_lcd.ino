@@ -24,6 +24,12 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define armHeight 100
 #define CLOSED false
 #define OPEN true
+#define UpButton 7
+#define DownButton 8
+#define BackButton 2
+#define EnterButton 12
+#define ButtonDelay 300
+#define LedPin 13
 
 long timer = 0;
 int y_arrow = 0;
@@ -45,6 +51,8 @@ int heightManual = 0;
 int baseManual = 0;
 int distanceManual = 0;
 bool claw = OPEN;
+long lastButtonMillis;
+
 
 void setup() {
   Serial.begin(115200);
@@ -58,10 +66,20 @@ void setup() {
   pinMode(S2, OUTPUT);
   pinMode(S3, OUTPUT);
   pinMode(sensorOut, INPUT);
+  pinMode(LedPin, OUTPUT);
+  digitalWrite(LedPin, LOW);
+  
   pinMode(basePot, INPUT);
   pinMode(distancePot, INPUT);
   pinMode(heightPot, INPUT);
   pinMode(ClawSwitch, INPUT_PULLUP);
+  
+  pinMode(BackButton, INPUT_PULLUP);
+  pinMode(UpButton, INPUT_PULLUP);
+  pinMode(DownButton, INPUT_PULLUP);
+  pinMode(EnterButton, INPUT_PULLUP);
+  lastButtonMillis = millis();
+  timer = millis();
   readEEPROM();
   lcd.begin();
   lcd.home();
@@ -125,6 +143,8 @@ char checkColor(){
   }
 }
 void readColor(){
+  digitalWrite(LedPin, HIGH);//turn the LED on
+  delay(50);
   digitalWrite(S2,LOW);
   digitalWrite(S3,LOW);
   // Reading the output frequency
@@ -161,6 +181,7 @@ void readColor(){
   if (b > 255){
     b = 255;
   }
+  digitalWrite(LedPin, LOW);
 }
 void calibrateRed(){
   readColor();
@@ -257,8 +278,31 @@ void radar(){
 }
 void control_menu(){
   if (Serial.available()){
-    if (!working){
-    switch(Serial.read()){
+    move_menu(Serial.read());
+  }
+  if((millis() - lastButtonMillis) > ButtonDelay){
+    if(!digitalRead(UpButton)){
+      move_menu('u');
+      lastButtonMillis = millis();
+    }
+    if(!digitalRead(DownButton)){
+      move_menu('d');
+      lastButtonMillis = millis();
+    }
+    if(!digitalRead(BackButton)){
+      move_menu('b');
+      lastButtonMillis = millis();
+    }
+    if(!digitalRead(EnterButton)){
+      move_menu('e');
+      lastButtonMillis = millis();
+    }
+    
+  }
+}
+void move_menu(char letter){
+  if (!working){
+    switch(letter){
       case 'u':
       y_arrow--;
       break;
@@ -273,12 +317,11 @@ void control_menu(){
       break;
     }
     }
-    if (Serial.read() == 'b'){
+    if (letter == 'b'){
       back = true;
     }
     fix_position();
     update_menu();
-  }
 }
 void fix_position(){
   if (y_arrow < 0){
@@ -380,22 +423,26 @@ void enter_menu(){
           screen[0] = 1;
           break;
         case 2:
-          Serial.println("Check position");//HELP
+          Serial.println("Check position");
           lcd.setCursor(0,0);
-          lcd.print("Distance: ");//ACTUAL DISTANCE
+          lcd.print("Distance: ");
+          lcd.print(arm.getDistance());
           lcd.setCursor(0,1);
-          lcd.print("Height: ");//ACTUAL HEIGHT
+          lcd.print("Height: ");
+          lcd.print(arm.getHeight());
           lcd.setCursor(0,2);
-          lcd.print("Degree: ");//ACTUAL DEGREE
+          lcd.print("Degree: ");
+          lcd.print(arm.getBase());
           working = true;
           break;
         case 3:
-          Serial.println("Check distance");//HELP
+          Serial.println("Check distance");
           lcd.setCursor(0,0);
           lcd.print("Distance: ");
           lcd.print(checkDistance());
           lcd.setCursor(0,2);
-          lcd.print("Degree: ");//ACTUAL DEGREE
+          lcd.print("Degree: ");
+          lcd.print(arm.getBase());
           working = true;
           break;
       }
