@@ -669,15 +669,15 @@ void manualMove(){
     else if (millis() - timer > 1000){
       timer = millis();
       lcd.setCursor(10,0);
-      lcd.print("   ");
+      lcd.print(F("   "));
       lcd.setCursor(10,0);
       lcd.print(distanceManual);
       lcd.setCursor(8,1);
-      lcd.print("   ");
+      lcd.print(F("   "));
       lcd.setCursor(8,1);
       lcd.print(heightManual);
       lcd.setCursor(8,2);
-      lcd.print("   ");
+      lcd.print(F("   "));
       lcd.setCursor(8,2);
       lcd.print(baseManual);
     }
