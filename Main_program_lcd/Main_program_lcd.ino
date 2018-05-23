@@ -29,6 +29,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define ButtonDelay 300
 #define LedPin 13
 
+long timer = 0;
 int y_arrow = 0;
 byte screen;
 byte deepness = 0;
@@ -41,7 +42,6 @@ bool clawOpen = true;
 bool over = false;
 bool working = false;
 bool manually = false;
-bool manualOnce = false;
 long lastButtonMillis;
 
 
@@ -70,6 +70,7 @@ void setup() {
   pinMode(DownButton, INPUT_PULLUP);
   pinMode(EnterButton, INPUT_PULLUP);
   lastButtonMillis = millis();
+  timer = millis();
   readEEPROM();
   lcd.begin();
   lcd.home();
@@ -521,7 +522,6 @@ void enter_menu(){
       }
       if (back){
          deepness--;
-         manualOnce = false;
       }
       break;
     case 2:
@@ -647,7 +647,6 @@ void leave(){
          resetServos();
 }
 void manualMove(){
-  long timer;
     if(!digitalRead(ClawSwitch))
     arm.openClaw();
   else
@@ -662,11 +661,7 @@ void manualMove(){
   int distanceManual = map(DPV, 0, 1023, 0, 160);
    
    if(canReach(heightManual, baseManual, distanceManual)){
-    if(!manualOnce){
-    manualOnce = true;
-    timer = millis();
-    }
-    else if (millis() - timer > 1000){
+    if (millis() - timer > 1000){
       timer = millis();
       lcd.setCursor(10,0);
       lcd.print(F("   "));
