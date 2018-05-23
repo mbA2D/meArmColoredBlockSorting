@@ -9,6 +9,7 @@ VL6180X sensor;
 meArmControlGit arm;
 LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 
+//Pin Assignments
 #define basePot A0
 #define distancePot A1
 #define heightPot A2
@@ -20,20 +21,22 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define S2 4
 #define S3 3
 #define sensorOut 5
-#define blockHeight 30
-#define armHeight 100
 #define UpButton 7
 #define DownButton 8
 #define BackButton 2
 #define EnterButton 12
-#define ButtonDelay 300
 #define LedPin 13
+
+#define ButtonDelay 300
+#define blockHeight 30
+#define armHeight 100
 
 long timer = 0;
 int y_arrow = 0;
 byte screen;
 byte deepness = 0;
 bool back, enter = false;
+int CC, CO; //for calibrating the claw on the spot
 int Rr, Rg, Rb, Gr, Gg, Gb, Br, Bg, Bb, Kr, Kg, Kb;
 int r, g, b;
 byte closestDegree; 
@@ -45,7 +48,52 @@ bool manually = false;
 long lastButtonMillis;
 
 
+uint8_t blockCount[3] = {0,0,0};
+
+#define rO 0 //Red offset - the rightmost side of the red area
+#define gO 45
+#define bO 90
+#define bD1 200
+#define bD2 160
+#define bD3 120
+#define bPD1 4
+#define bPD2 3
+#define bPD3 2
+uint8_t rP[bPD1 + bPD2 + bPD3][2]; //2 being distance, then angle
+uint8_t gP[bPD1 + bPD2 + bPD3][2];
+uint8_t bP[bPD1 + bPD2 + bPD3][2];
+
+
+
 void setup() {
+  
+  //setting up the places to put the blocks
+  for(uint8_t i = 0; i < bPD1; i++){
+	  rP[i][0] = bD1;
+	  rP[i][1] = rO + (0.5 + i)*(45/bPD1);
+	  gP[i][0] = bD1;
+	  gP[i][1] = gO + (0.5 + i)*(45/bPD1);
+	  bP[i][0] = bD1;
+	  bP[i][1] = bO + (0.5 + i)*(45/bPD1);
+  }
+  for(uint8_t i = 0; i < bPD2; i++){
+	  rP[i+bPD1][0] = bD2;
+	  rP[i+bPD1][1] = rO + (0.5 + i)*(45/bPD2);
+	  gP[i+bPD1][0] = bD2;
+	  gP[i+bPD1][1] = gO + (0.5 + i)*(45/bPD2);
+	  bP[i+bPD1][0] = bD2;
+	  bP[i+bPD1][1] = bO + (0.5 + i)*(45/bPD2);
+  }
+  for(uint8_t i = 0; i < bPD3; i++){
+	  rP[i+bPD1+bPD2][0] = bD3;
+	  rP[i+bPD1+bPD2][1] = rO + (0.5 + i)*(45/bPD3);
+	  gP[i+bPD1+bPD2][0] = bD3;
+	  gP[i+bPD1+bPD2][1] = gO + (0.5 + i)*(45/bPD3);
+	  bP[i+bPD1+bPD2][0] = bD3;
+	  bP[i+bPD1+bPD2][1] = bO + (0.5 + i)*(45/bPD3);
+  }
+  
+  
   Serial.begin(115200);
   arm.beginArm(basePin, shoulderPin, elbowPin, gripperPin);
   delay(500);
@@ -86,25 +134,29 @@ void loop() {
 
 char checkColor(){
   readColor();
-  /*double diffR = sq(r-Rr) + sq(g-Rg) + sq(b-Rb);
+  /*
+  double diffR = sq(r-Rr) + sq(g-Rg) + sq(b-Rb);
   double diffG = sq(r-Gr) + sq(g-Gg) + sq(b-Gb);
   double diffB = sq(r-Br) + sq(g-Bg) + sq(b-Bb);
   double diffK = sq(r-Kr) + sq(g-Kg) + sq(b-Kb);
 
   double c = min(min(diffR, diffG), min(diffB, diffK));
-
-  if(c == diffR){
-    return 'r';
+	
+  switch(c){
+    case diffG:
+      return 'g';
+      break;
+    case diffR:
+      return 'r';
+      break;
+    case diffB:
+      return 'b';
+      break;
+    default:
+      return 'k';
+      break;
   }
-  if(c == diffG){
-    return 'g';
-  }
-  if(c == diffB){
-    return 'b';
-  }
-  if(c == diffK){
-    return'k';
-  }*/
+*/
   if (r < Gr && r < Br && r < Kr){
     return 'r';
   }
@@ -229,10 +281,10 @@ int checkDistance(){
 void radar(){
   int dist;
   closestDistance = 700;
-  for (int v = 135; v <= 180; v+= 3){
+  for (int v = 135; v <= 180; v+= 3){//135 and 180 could be switched to defines if that would be useful.
     arm.moveBaseServo(v);
     dist = checkDistance();
-    if (dist < closestDistance && dist < 600){
+    if ((dist < closestDistance) && (dist < 600)){
       closestDistance = dist;
       closestDegree = v;
     }
@@ -583,7 +635,10 @@ void enter_menu(){
                 break;
               case 3:
                 Serial.println(F("Sort"));
-                do {
+                blockCount[0] = 0;
+				blockCount[1] = 0;
+				blockCount[2] = 0; //reset the block count.
+				do {
                 pick();
                 if (over){
                   break;
@@ -609,42 +664,55 @@ void pick(){
   if (!over){
          arm.moveArm(armHeight, 70 , closestDegree);
          delay(500);
-         arm.moveArm(blockHeight, closestDistance -20 , closestDegree);
+         arm.moveArm(blockHeight, closestDistance -20 , closestDegree);//UPDATE -20 no longer needed
          delay(500);
          arm.closeClaw();
          clawOpen = false;
          delay(500);
          Serial.println(checkColor());//DOESNT WORK RIGHT NOW
-         arm.moveArm(armHeight,closestDistance -20, closestDegree );
+         arm.moveArm(armHeight,closestDistance -20, closestDegree );//UPDATE -20 no longer needed
   }
 }
 void leave(){
-  int colorDegree;
+	//the block is already in the claw
+  int BlockDegree;
+  int BlockDistance;
   switch(checkColor()){
     case 'k':
-      colorDegree = closestDegree;
+      BlockDegree = closestDegree; //leave it where it is (for now) UPDATE
+	  BlockDistance = 130;
       break;
     case 'g':
-      colorDegree = 100;
+      //BlockDegree = 100;
+	  BlockDistance = gP[blockCount[1]][0];
+	  BlockDegree = gP[blockCount[1]][1];
+	  blockCount[1]++;
       break;
     case 'b':
-      colorDegree = 70;
+      //BlockDegree = 70;
+	  BlockDistance = bP[blockCount[2]][0];
+	  BlockDegree = bP[blockCount[2]][1];
+	  blockCount[2]++;
       break;
     case 'r':
-      colorDegree = 20;
+      //BlockDegree = 20;
+	  BlockDistance = rP[blockCount[0]][0];
+	  BlockDegree = rP[blockCount[0]][1];
+	  blockCount[0]++;
       break;
   }
   delay(500);
-         arm.moveArm(armHeight,armHeight,colorDegree);
+         arm.moveArm(armHeight,armHeight,BlockDegree);//move to area
          delay(500);
-         arm.moveArm(blockHeight,armHeight,colorDegree);
+         //arm.moveArm(blockHeight,armHeight,BlockDegree);//move down to the table - armHeight is being used as distance
+		 arm.moveArm(blockHeight, BlockDistance, BlockDegree);
          delay(500);
-         arm.openClaw();
+         arm.openClaw();//release the block
          clawOpen = true;
          delay(500);
-         arm.moveArm(armHeight,armHeight,colorDegree);
-         delay(500);
-         resetServos();
+         arm.moveArm(armHeight,armHeight,BlockDegree);//move back out of the way
+         delay(500);//all the delays might not be needed.
+         resetServos();//why reset the servos? UPDATE
 }
 void manualMove(){
     if(!digitalRead(ClawSwitch))
@@ -682,5 +750,4 @@ void manualMove(){
 bool canReach(int heightManual,int baseManual,int distanceManual){
   return(sqrt(sq(heightManual) + sq(baseManual)) >= 160);
 }
-
 
