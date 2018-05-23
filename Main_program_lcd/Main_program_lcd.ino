@@ -53,6 +53,7 @@ uint8_t blockCount[3] = {0,0,0};
 #define rO 0 //Red offset - the rightmost side of the red area
 #define gO 45
 #define bO 90
+#define sO 0 //squeeze offset - if any blocks are touching the edges of the area, make this bigger (a few degrees). it will squeeze the blocks closer together
 #define bD1 200
 #define bD2 160
 #define bD3 120
@@ -70,27 +71,27 @@ void setup() {
   //setting up the places to put the blocks
   for(uint8_t i = 0; i < bPD1; i++){
 	  rP[i][0] = bD1;
-	  rP[i][1] = rO + (0.5 + i)*(45/bPD1);
+	  rP[i][1] = rO + (sO/2) + (0.5 + i)*((45-sO)/bPD1);
 	  gP[i][0] = bD1;
-	  gP[i][1] = gO + (0.5 + i)*(45/bPD1);
+	  gP[i][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
 	  bP[i][0] = bD1;
-	  bP[i][1] = bO + (0.5 + i)*(45/bPD1);
+	  bP[i][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
   }
   for(uint8_t i = 0; i < bPD2; i++){
 	  rP[i+bPD1][0] = bD2;
-	  rP[i+bPD1][1] = rO + (0.5 + i)*(45/bPD2);
+	  rP[i+bPD1][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
 	  gP[i+bPD1][0] = bD2;
-	  gP[i+bPD1][1] = gO + (0.5 + i)*(45/bPD2);
+	  gP[i+bPD1][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
 	  bP[i+bPD1][0] = bD2;
-	  bP[i+bPD1][1] = bO + (0.5 + i)*(45/bPD2);
+	  bP[i+bPD1][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
   }
   for(uint8_t i = 0; i < bPD3; i++){
 	  rP[i+bPD1+bPD2][0] = bD3;
-	  rP[i+bPD1+bPD2][1] = rO + (0.5 + i)*(45/bPD3);
+	  rP[i+bPD1+bPD2][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
 	  gP[i+bPD1+bPD2][0] = bD3;
-	  gP[i+bPD1+bPD2][1] = gO + (0.5 + i)*(45/bPD3);
+	  gP[i+bPD1+bPD2][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
 	  bP[i+bPD1+bPD2][0] = bD3;
-	  bP[i+bPD1+bPD2][1] = bO + (0.5 + i)*(45/bPD3);
+	  bP[i+bPD1+bPD2][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
   }
   
   
