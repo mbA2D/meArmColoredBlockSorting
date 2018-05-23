@@ -29,7 +29,10 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 
 #define ButtonDelay 300
 #define blockHeight 30
-#define armHeight 100
+#define armHeight 120
+
+#define maxAllowedWrites 200//for EEPROMex
+#define memBase 350
 
 long timer = 0;
 int y_arrow = 0;
@@ -94,6 +97,8 @@ void setup() {
 	  bP[i+bPD1+bPD2][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
   }
   
+  EEPROM.setMemPool(memBase, EEPROMSizeUno);
+  EEPROM.setMaxAllowedWrites(maxAllowedWrites);
   
   Serial.begin(115200);
   arm.beginArm(basePin, shoulderPin, elbowPin, gripperPin);
@@ -205,45 +210,45 @@ void readColor(){
 }
 void calibrateRed(){
   readColor();
-  EEPROM.updateInt(1,r);
-  EEPROM.updateInt(2,g);
-  EEPROM.updateInt(3,b);
+  EEPROM.updateInt(350,r);
+  EEPROM.updateInt(352,g);
+  EEPROM.updateInt(354,b);
   readEEPROM();
 }
 void calibrateGreen(){
   readColor();
-  EEPROM.updateInt(4,r);
-  EEPROM.updateInt(5,g);
-  EEPROM.updateInt(6,b);
+  EEPROM.updateInt(356,r);
+  EEPROM.updateInt(358,g);
+  EEPROM.updateInt(360,b);
   readEEPROM();
 }
 void calibrateBlue(){
   readColor();
-  EEPROM.updateInt(7,r);
-  EEPROM.updateInt(8,g);
-  EEPROM.updateInt(9,b);
+  EEPROM.updateInt(362,r);
+  EEPROM.updateInt(364,g);
+  EEPROM.updateInt(366,b);
   readEEPROM();
 }
 void calibrateBlack(){
   readColor();
-  EEPROM.updateInt(10,r);
-  EEPROM.updateInt(11,g);
-  EEPROM.updateInt(12,b);
+  EEPROM.updateInt(368,r);
+  EEPROM.updateInt(370,g);
+  EEPROM.updateInt(372,b);
   readEEPROM();
 }
 void readEEPROM(){
-  Rr = EEPROM.readInt(1);
-  Rg = EEPROM.readInt(2);
-  Rb = EEPROM.readInt(3);
-  Gr = EEPROM.readInt(4);
-  Gg = EEPROM.readInt(5);
-  Gb = EEPROM.readInt(6);
-  Br = EEPROM.readInt(7);
-  Bg = EEPROM.readInt(8);
-  Bb = EEPROM.readInt(9);
-  Kr = EEPROM.readInt(10);
-  Kg = EEPROM.readInt(11);
-  Kb = EEPROM.readInt(12);
+  Rr = EEPROM.readInt(350);
+  Rg = EEPROM.readInt(352);
+  Rb = EEPROM.readInt(354);
+  Gr = EEPROM.readInt(356);
+  Gg = EEPROM.readInt(358);
+  Gb = EEPROM.readInt(360);
+  Br = EEPROM.readInt(362);
+  Bg = EEPROM.readInt(364);
+  Bb = EEPROM.readInt(366);
+  Kr = EEPROM.readInt(368);
+  Kg = EEPROM.readInt(370);
+  Kb = EEPROM.readInt(372);
 }
 void resetServos(){
   arm.moveBaseServo(90);
@@ -282,6 +287,7 @@ int checkDistance(){
 void radar(){
   int dist;
   closestDistance = 700;
+  arm.moveArm(armHeight, 70 , 135);
   for (int v = 135; v <= 180; v+= 3){//135 and 180 could be switched to defines if that would be useful.
     arm.moveBaseServo(v);
     dist = checkDistance();
@@ -498,40 +504,40 @@ void enter_menu(){
                 Serial.println(F("EEPROM values"));
                 lcd.setCursor(0,0);
                 lcd.print(F("Rr:"));
-                lcd.print(EEPROM.readInt(1));
+                lcd.print(EEPROM.readInt(350));
                 lcd.setCursor(0,1);
                 lcd.print(F("Rg:"));
-                lcd.print(EEPROM.readInt(2));
+                lcd.print(EEPROM.readInt(352));
                 lcd.setCursor(0,2);
                 lcd.print(F("Rb:"));
-                lcd.print(EEPROM.readInt(3));
+                lcd.print(EEPROM.readInt(354));
                 lcd.setCursor(7,0);
                 lcd.print(F("Gr:"));
-                lcd.print(EEPROM.readInt(4));
+                lcd.print(EEPROM.readInt(356));
                 lcd.setCursor(7,1);
                 lcd.print(F("Gg:"));
-                lcd.print(EEPROM.readInt(5));
+                lcd.print(EEPROM.readInt(358));
                 lcd.setCursor(7,2);
                 lcd.print(F("Gb:"));
-                lcd.print(EEPROM.readInt(6));
+                lcd.print(EEPROM.readInt(360));
                 lcd.setCursor(14,0);
                 lcd.print(F("Br:"));
-                lcd.print(EEPROM.readInt(7));
+                lcd.print(EEPROM.readInt(362));
                 lcd.setCursor(14,1);
                 lcd.print(F("Bg:"));
-                lcd.print(EEPROM.readInt(8));
+                lcd.print(EEPROM.readInt(364));
                 lcd.setCursor(14,2);
                 lcd.print(F("Bb:"));
-                lcd.print(EEPROM.readInt(9));
+                lcd.print(EEPROM.readInt(366));
                 lcd.setCursor(0,3);
                 lcd.print(F("Kr:"));
-                lcd.print(EEPROM.readInt(10));
+                lcd.print(EEPROM.readInt(368));
                 lcd.setCursor(7,3);
                 lcd.print(F("Kg:"));
-                lcd.print(EEPROM.readInt(11));
+                lcd.print(EEPROM.readInt(370));
                 lcd.setCursor(14,3);
                 lcd.print(F("Kb:"));
-                lcd.print(EEPROM.readInt(12));
+                lcd.print(EEPROM.readInt(372));
                 working = true;
                 break;
             }
