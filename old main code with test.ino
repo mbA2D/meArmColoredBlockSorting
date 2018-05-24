@@ -1,3 +1,5 @@
+#include <MedianFilter.h>
+
 
 //Which sensor is being used
 //#define Sensor_VL6180X
@@ -18,7 +20,7 @@
 	VL53L0X sensor;
 #endif
 	
-
+MedianFilter test(10, 0);
 meArmControlGit arm;
 LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 
@@ -286,11 +288,15 @@ void resetServos(){
   arm.openClaw();
 }
 int checkDistance(){
-	return(sensor.readRangeSingleMillimeters());
+	//return(sensor.readRangeSingleMillimeters());
   int range = 0;
+  int adding;
   int rangeArr[3] = {0,0,0};
   for(int i = 0; i < 3; i++){
-    range += sensor.readRangeSingleMillimeters();
+    adding = sensor.readRangeSingleMillimeters();
+    test.in(adding);
+    adding = test.out();
+    range += adding;
 	#ifdef Sensor_VL53L0X
 		rangeArr[i] = range;
 	#endif
@@ -323,7 +329,8 @@ int checkDistance(){
   
 	if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
   #endif
-  
+  test.in(range);
+  range = test.out();
   return(range);
 }
 void radar(){
