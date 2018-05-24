@@ -1,11 +1,24 @@
+
+//Which sensor is being used
+//#define Sensor_VL6180X
+#define Sensor_VL53L0X
+
 #include <EEPROMex.h>
 #include <meArmControlGit.h>
 #include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 #include <Wire.h>
-#include <VL6180X.h>
 
-VL6180X sensor;
+#ifdef Sensor_VL6180X
+	#include <VL6180X.h>
+	VL6180X sensor;
+#endif
+#ifdef Sensor_VL53L0X
+	#include <VL53L0X.h>
+	VL53L0X sensor;
+#endif
+	
+
 meArmControlGit arm;
 LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 
@@ -28,11 +41,14 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define LedPin 13
 
 #define ButtonDelay 300
-#define blockHeight 30
+#define blockPickHeight 20
+#define blockDropHeight 30
 #define armHeight 120
 
 #define maxAllowedWrites 200//for EEPROMex
 #define memBase 350
+
+#define Distance_Offset 20
 
 long timer = 0;
 int y_arrow = 0;
@@ -60,9 +76,9 @@ uint8_t blockCount[3] = {0,0,0};
 #define bD1 200
 #define bD2 160
 #define bD3 120
-#define bPD1 4
-#define bPD2 3
-#define bPD3 2
+#define bPD1 3
+#define bPD2 2
+#define bPD3 1
 uint8_t rP[bPD1 + bPD2 + bPD3][2]; //2 being distance, then angle
 uint8_t gP[bPD1 + bPD2 + bPD3][2];
 uint8_t bP[bPD1 + bPD2 + bPD3][2];
@@ -97,6 +113,7 @@ void setup() {
 	  bP[i+bPD1+bPD2][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
   }
   
+  //EEPROM setup
   EEPROM.setMemPool(memBase, EEPROMSizeUno);
   EEPROM.setMaxAllowedWrites(maxAllowedWrites);
   
@@ -104,26 +121,37 @@ void setup() {
   arm.beginArm(basePin, shoulderPin, elbowPin, gripperPin);
   delay(500);
   Wire.begin();
+  
+  //Laser distance sensor
   sensor.init();
-  sensor.configureDefault();
+  #ifdef Sensor_VL6180X
+	sensor.configureDefault();
+  #endif
   sensor.setTimeout(500);
+  
   resetServos();
+  
+  //Color Sensor
   pinMode(S2, OUTPUT);
   pinMode(S3, OUTPUT);
   pinMode(sensorOut, INPUT);
+  //High Power LED
   pinMode(LedPin, OUTPUT);
   digitalWrite(LedPin, LOW);
   
+  //Manual Control
   pinMode(basePot, INPUT);
   pinMode(distancePot, INPUT);
   pinMode(heightPot, INPUT);
   pinMode(ClawSwitch, INPUT_PULLUP);
   
+  //Buttons for Menu Control
   pinMode(BackButton, INPUT_PULLUP);
   pinMode(UpButton, INPUT_PULLUP);
   pinMode(DownButton, INPUT_PULLUP);
   pinMode(EnterButton, INPUT_PULLUP);
   lastButtonMillis = millis();
+  
   timer = millis();
   readEEPROM();
   lcd.begin();
@@ -258,40 +286,55 @@ void resetServos(){
   arm.openClaw();
 }
 int checkDistance(){
- 
+	return(sensor.readRangeSingleMillimeters());
   int range = 0;
-  for(int i = 0; i < 5; i++){
+  int rangeArr[3] = {0,0,0};
+  for(int i = 0; i < 3; i++){
     range += sensor.readRangeSingleMillimeters();
+	#ifdef Sensor_VL53L0X
+		rangeArr[i] = range;
+	#endif
+	delay(30);
   }
-  range /= 5;
+  #ifdef Sensor_VL53L0X
+	range = 0;
+	for(int i = 0; i < 3; i++){
+		if(rangeArr[i] > 400){
+			rangeArr[i] = 3000;
+		}
+		range += rangeArr[i];
+	}
+  #endif
+  range /= 3;
 
+  #ifdef Sensor_VL6180X
+	if(range > 100 && range <= 150){
+		range = ((range - 100) * 1.58) + 100;
+	}
+	else if (range > 150){
+		range = ((range - 150) * 8) + 150;
+	}
 
-  if(range > 100 && range <= 150){
-    range = ((range - 100) * 1.58) + 100;
-  }
-  else if (range > 150){
-    range = ((range - 150) * 8) + 150;
-  }
-
-  if(SP)
-  {
-    Serial.print(F("Distance: ")); 
-    Serial.println(range);
-  }
+	if(SP)
+	{
+		Serial.print(F("Distance: ")); 
+		Serial.println(range);
+	}
   
-  if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
+	if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
+  #endif
   
-  //Serial.println();
   return(range);
 }
 void radar(){
   int dist;
   closestDistance = 700;
   arm.moveArm(armHeight, 70 , 135);
-  for (int v = 135; v <= 180; v+= 3){//135 and 180 could be switched to defines if that would be useful.
+  delay(500);
+  for (int v = 135; v <= 180; v+= 2){//135 and 180 could be switched to defines if that would be useful.
     arm.moveBaseServo(v);
     dist = checkDistance();
-    if ((dist < closestDistance) && (dist < 600)){
+    if ((dist < closestDistance) && (dist < 300)){
       closestDistance = dist;
       closestDegree = v;
     }
@@ -646,13 +689,18 @@ void enter_menu(){
 				blockCount[1] = 0;
 				blockCount[2] = 0; //reset the block count.
 				do {
-                pick();
-                if (over){
-                  break;
-                }
-                leave();
+					pick();
+					if (over){
+						break;
+					}
+					leave();
                 } while (!over);
                 over = false;
+				resetServos();
+				Serial.println("BlockCount:");
+				Serial.println(blockCount[0]);
+				Serial.println(blockCount[1]);
+				Serial.println(blockCount[2]);
                 break;
             }
           } 
@@ -669,15 +717,17 @@ void enter_menu(){
 void pick(){
   radar();
   if (!over){
+		 arm.openClaw();
+		 clawOpen = true;
          arm.moveArm(armHeight, 70 , closestDegree);
          delay(500);
-         arm.moveArm(blockHeight, closestDistance -20 , closestDegree);//UPDATE -20 no longer needed
+         arm.moveArm(blockPickHeight, closestDistance + Distance_Offset, closestDegree);
          delay(500);
          arm.closeClaw();
          clawOpen = false;
          delay(500);
-         Serial.println(checkColor());//DOESNT WORK RIGHT NOW
-         arm.moveArm(armHeight,closestDistance -20, closestDegree );//UPDATE -20 no longer needed
+         Serial.println(checkColor());
+         arm.moveArm(armHeight,closestDistance + Distance_Offset, closestDegree );
   }
 }
 void leave(){
@@ -711,8 +761,8 @@ void leave(){
   delay(500);
          arm.moveArm(armHeight,armHeight,BlockDegree);//move to area
          delay(500);
-         //arm.moveArm(blockHeight,armHeight,BlockDegree);//move down to the table - armHeight is being used as distance
-		 arm.moveArm(blockHeight, BlockDistance, BlockDegree);
+         //arm.moveArm(blockDropHeight,armHeight,BlockDegree);//move down to the table - armHeight is being used as distance
+		 arm.moveArm(blockDropHeight, BlockDistance, BlockDegree);
          delay(500);
          arm.openClaw();//release the block
          clawOpen = true;
@@ -757,4 +807,3 @@ void manualMove(){
 bool canReach(int heightManual,int baseManual,int distanceManual){
   return(sqrt(sq(heightManual) + sq(baseManual)) >= 160);
 }
-
