@@ -47,7 +47,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define blockDropHeight 30
 #define armHeight 120
 
-#define maxAllowedWrites 200//for EEPROMex
+#define maxAllowedWrites 1000//for EEPROMex
 #define memBase 350
 
 #define Distance_Offset 20
@@ -129,7 +129,7 @@ void setup() {
   #ifdef Sensor_VL6180X
 	sensor.configureDefault();
   #endif
-  sensor.setTimeout(500);
+  sensor.setTimeout(1);
   
   resetServos();
   
@@ -171,40 +171,70 @@ void loop() {
 char checkColor(){
   readColor();
   /*
-  double diffR = sq(r-Rr) + sq(g-Rg) + sq(b-Rb);
-  double diffG = sq(r-Gr) + sq(g-Gg) + sq(b-Gb);
-  double diffB = sq(r-Br) + sq(g-Bg) + sq(b-Bb);
-  double diffK = sq(r-Kr) + sq(g-Kg) + sq(b-Kb);
+  double diffR = sqrt(sq(r-Rr) + sq(g-Rg) + sq(b-Rb));
+  double diffG = sqrt(sq(r-Gr) + sq(g-Gg) + sq(b-Gb));
+  double diffB = sqrt(sq(r-Br) + sq(g-Bg) + sq(b-Bb));
+  double diffK = sqrt(sq(r-Kr) + sq(g-Kg) + sq(b-Kb));
 
   double c = min(min(diffR, diffG), min(diffB, diffK));
 	
-  switch(c){
-    case diffG:
-      return 'g';
-      break;
-    case diffR:
-      return 'r';
-      break;
-    case diffB:
-      return 'b';
-      break;
-    default:
-      return 'k';
-      break;
-  }
+	if(c == diffR){
+		return 'r';
+	}
+	else if(c == diffG){
+		return 'g';
+	}
+	else if(c == diffB){
+		return 'b';
+	}
+	else{
+		return 'k';
+	}
+	
 */
-  if (r < Gr && r < Br && r < Kr){
+
+//or we can check everything as a multiple of another. for g - b = xg, r = xg
+
+char small = 'k';
+//pick the smallest value	
+if(r < g && r < b)
+	small = 'r';
+else if (g < r && g < b)
+	small = 'g';
+else if (b < g && b < r)
+	small = 'b';
+if(r > 100 && g > 100 && b > 100) //the 100 values might need to be changed.
+	small = 'k';
+	return small;
+	
+	/*switch(small){
+		case 'r':
+		
+		break;
+		case 'g':
+		
+		break;
+		case 'b':
+		
+		break;
+		default:
+		
+		break;
+	}*/
+	
+	/*
+  if (r < Gr && r < Br){
     return 'r';
   }
-  else if (g < Rg && g < Bg && g < Kg){
+  else if (g < Rg && g < Bg){
     return 'g';
   }
-  else if (b < Rb && b < Gb && b < Kb){
+  else if (b < Rb && b < Gb){
     return 'b';
   }
   else{
     return 'k';
-  }
+  }*/
 }
 void readColor(){
   digitalWrite(LedPin, HIGH);//turn the LED on
@@ -288,6 +318,7 @@ void resetServos(){
   arm.openClaw();
 }
 int checkDistance(){
+<<<<<<< HEAD:old main code with test.ino
 	//return(sensor.readRangeSingleMillimeters());
   int range = 0;
   int adding;
@@ -297,19 +328,38 @@ int checkDistance(){
     test.in(adding);
     adding = test.out();
     range += adding;
+=======
+	//read 5 values, if any are over 1000 then nothing there.
+	//right now, the raw reading is fine if something is in front of it.
+	int range = 0;
+	range = sensor.readRangeSingleMillimeters();
+	if(!sensor.timeoutOccurred()){
+		return range;
+	}
+	return 3000;
+  int rangeArr[5] = {0,0,0,0,0};
+  for(int i = 0; i < 5; i++){
+    range += sensor.readRangeSingleMillimeters();
+>>>>>>> 4732b6d41a244072ab04efadbaf06e81119194e6:Main_program_lcd/Main_program_lcd.ino
 	#ifdef Sensor_VL53L0X
 		rangeArr[i] = range;
 	#endif
-	delay(30);
+	delay(50);
   }
   #ifdef Sensor_VL53L0X
 	range = 0;
-	for(int i = 0; i < 3; i++){
+	for(int i = 0; i < 5; i++){
 		if(rangeArr[i] > 400){
-			rangeArr[i] = 3000;
+			range = 1000;
+			
+			//rangeArr[i] = 3000;
 		}
-		range += rangeArr[i];
+		//range += rangeArr[i];
 	}
+	if(range != 1000){
+		range = rangeArr[3];
+	}
+	return range;
   #endif
   range /= 3;
 
@@ -337,7 +387,7 @@ void radar(){
   int dist;
   closestDistance = 700;
   arm.moveArm(armHeight, 70 , 135);
-  delay(500);
+  delay(300);
   for (int v = 135; v <= 180; v+= 2){//135 and 180 could be switched to defines if that would be useful.
     arm.moveBaseServo(v);
     dist = checkDistance();
