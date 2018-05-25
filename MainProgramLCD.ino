@@ -43,7 +43,7 @@ LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
 #define ButtonDelay 300
 #define blockPickHeight 20
 #define blockDropHeight 30
-#define armHeight 120
+#define armHeight 140
 
 #define maxAllowedWrites 1000//for EEPROMex
 #define memBase 350
@@ -73,16 +73,17 @@ uint8_t blockCount[3] = {0,0,0};
 #define gO 45
 #define bO 90
 #define sO 0 //squeeze offset - if any blocks are touching the edges of the area, make this bigger (a few degrees). it will squeeze the blocks closer together
-#define bD1 200
-#define bD2 160
-#define bD3 120
+#define bD1 210
+#define bD2 170
+#define bD3 130
 #define bPD1 3
 #define bPD2 2
 #define bPD3 1
 uint8_t rP[bPD1 + bPD2 + bPD3][2]; //2 being distance, then angle
 uint8_t gP[bPD1 + bPD2 + bPD3][2];
 uint8_t bP[bPD1 + bPD2 + bPD3][2];
-
+uint8_t kP[bPD1 + bPD2 + bPD3][2];//final black positions
+uint8_t kTP[bPD1 + bPD2 + bPD3][2]; //temporary black positions
 
 
 void setup() {
@@ -175,11 +176,11 @@ char checkColor(){
 
 char small = 'k';
 //pick the smallest value 
-if(r < g && r < b)
+if(r <= (g-20) && r <= (b-30))
   small = 'r';
-else if (g < r && g < b)
+else if (g <= r && g <= (b-5))
   small = 'g';
-else if (b < g && b < r)
+else if (b <= g && b <= r)
   small = 'b';
 if(r > 150 && g > 120 && b > 160) //the 100 values might need to be changed.
   small = 'k';
@@ -275,10 +276,11 @@ void readEEPROM(){
   Kb = EEPROM.readInt(372);
 }
 void resetServos(){
-  arm.moveBaseServo(90);
-  arm.moveGripperServo(armHeight);
-  arm.moveShoulderServo(armHeight);
-  arm.moveElbowServo(armHeight);
+  //arm.moveBaseServo(90);
+  //arm.moveGripperServo(armHeight);
+  arm.moveArm(150, 140, 90);
+  //arm.moveShoulderServo(armHeight);
+  //arm.moveElbowServo(armHeight);
   arm.openClaw();
 }
 int checkDistance(){
@@ -324,7 +326,7 @@ int checkDistance(){
     return 8888;
   }
   if(range > 250){
-    return 7777;
+	  return 7777;
   }
   return range;
   #endif
@@ -742,15 +744,20 @@ void pick(){
   if (!over){
      arm.openClaw();
      clawOpen = true;
-         arm.moveArm(armHeight, 70 , closestDegree);
-         delay(500);
-         arm.moveArm(blockPickHeight, closestDistance + Distance_Offset, closestDegree);
-         delay(500);
-         arm.closeClaw();
-         clawOpen = false;
-         delay(500);
-         Serial.println(checkColor());
-         arm.moveArm(armHeight,closestDistance + Distance_Offset, closestDegree );
+     arm.moveArm(armHeight, 50 , closestDegree);
+	 delay(500);
+	 //arm.moveArm((60), 40, closestDegree);
+	 arm.moveArm(60,50,closestDegree);
+     delay(500);
+     arm.moveArm(blockPickHeight, closestDistance + Distance_Offset, closestDegree);
+     delay(500);
+     arm.closeClaw();
+     clawOpen = false;
+     delay(500);
+     //Serial.println(checkColor());
+     //arm.moveArm(armHeight,closestDistance + Distance_Offset, closestDegree );
+	 arm.moveArm(armHeight,100, closestDegree );
+	 delay(500);//move back out of the way of the blocks
   }
 }
 void leave(){
@@ -760,7 +767,7 @@ void leave(){
   switch(checkColor()){
     case 'k':
       BlockDegree = closestDegree; //leave it where it is (for now) UPDATE
-    BlockDistance = 130;
+      BlockDistance = 130;
       break;
     case 'g':
       //BlockDegree = 100;
@@ -782,16 +789,19 @@ void leave(){
       break;
   }
   delay(500);
-         arm.moveArm(armHeight,armHeight,BlockDegree);//move to area
-         delay(500);
+         arm.moveArm(armHeight, 100, BlockDegree);
+		 delay(500);
+		 //arm.moveArm(armHeight,armHeight,BlockDegree);//move to area
+         //delay(500);
          //arm.moveArm(blockDropHeight,armHeight,BlockDegree);//move down to the table - armHeight is being used as distance
-     arm.moveArm(blockDropHeight, BlockDistance, BlockDegree);
-         delay(500);
-         arm.openClaw();//release the block
-         clawOpen = true;
-         delay(500);
-         arm.moveArm(armHeight,armHeight,BlockDegree);//move back out of the way
-         delay(500);//all the delays might not be needed.
+		 arm.moveArm(blockDropHeight, BlockDistance, BlockDegree);
+         delay(400);
+         arm.releaseClaw();//release the block
+         delay(300);
+         arm.moveArm(armHeight,100,BlockDegree);//move back out of the way
+		 arm.openClaw(); //open the claw fully
+		 clawOpen = true;
+         delay(400);//all the delays might not be needed.
          resetServos();//why reset the servos? UPDATE
 }
 void manualMove(){
