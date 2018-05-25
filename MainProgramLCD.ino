@@ -181,7 +181,7 @@ else if (g < r && g < b)
   small = 'g';
 else if (b < g && b < r)
   small = 'b';
-if(r > 100 && g > 100 && b > 100) //the 100 values might need to be changed.
+if(r > 150 && g > 120 && b > 160) //the 100 values might need to be changed.
   small = 'k';
   return small;
   
@@ -320,8 +320,11 @@ int checkDistance(){
       count++;
     }
   }
-  if(count >= 3){
+  if(count >= 2){
     return 8888;
+  }
+  if(range > 250){
+    return 7777;
   }
   return range;
   #endif
