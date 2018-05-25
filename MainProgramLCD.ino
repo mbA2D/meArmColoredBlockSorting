@@ -10,14 +10,14 @@
 #include <Wire.h>
 
 #ifdef Sensor_VL6180X
-	#include <VL6180X.h>
-	VL6180X sensor;
+  #include <VL6180X.h>
+  VL6180X sensor;
 #endif
 #ifdef Sensor_VL53L0X
-	#include <VL53L0X.h>
-	VL53L0X sensor;
+  #include <VL53L0X.h>
+  VL53L0X sensor;
 #endif
-	
+  
 
 meArmControlGit arm;
 LiquidCrystal_I2C lcd(0x27, 20, 4);//Change depending on the size
@@ -89,28 +89,28 @@ void setup() {
   
   //setting up the places to put the blocks
   for(uint8_t i = 0; i < bPD1; i++){
-	  rP[i][0] = bD1;
-	  rP[i][1] = rO + (sO/2) + (0.5 + i)*((45-sO)/bPD1);
-	  gP[i][0] = bD1;
-	  gP[i][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
-	  bP[i][0] = bD1;
-	  bP[i][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
+    rP[i][0] = bD1;
+    rP[i][1] = rO + (sO/2) + (0.5 + i)*((45-sO)/bPD1);
+    gP[i][0] = bD1;
+    gP[i][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
+    bP[i][0] = bD1;
+    bP[i][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD1);
   }
   for(uint8_t i = 0; i < bPD2; i++){
-	  rP[i+bPD1][0] = bD2;
-	  rP[i+bPD1][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
-	  gP[i+bPD1][0] = bD2;
-	  gP[i+bPD1][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
-	  bP[i+bPD1][0] = bD2;
-	  bP[i+bPD1][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
+    rP[i+bPD1][0] = bD2;
+    rP[i+bPD1][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
+    gP[i+bPD1][0] = bD2;
+    gP[i+bPD1][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
+    bP[i+bPD1][0] = bD2;
+    bP[i+bPD1][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD2);
   }
   for(uint8_t i = 0; i < bPD3; i++){
-	  rP[i+bPD1+bPD2][0] = bD3;
-	  rP[i+bPD1+bPD2][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
-	  gP[i+bPD1+bPD2][0] = bD3;
-	  gP[i+bPD1+bPD2][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
-	  bP[i+bPD1+bPD2][0] = bD3;
-	  bP[i+bPD1+bPD2][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
+    rP[i+bPD1+bPD2][0] = bD3;
+    rP[i+bPD1+bPD2][1] = rO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
+    gP[i+bPD1+bPD2][0] = bD3;
+    gP[i+bPD1+bPD2][1] = gO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
+    bP[i+bPD1+bPD2][0] = bD3;
+    bP[i+bPD1+bPD2][1] = bO + (sO/2) +(0.5 + i)*((45-sO)/bPD3);
   }
   
   //EEPROM setup
@@ -125,9 +125,10 @@ void setup() {
   //Laser distance sensor
   sensor.init();
   #ifdef Sensor_VL6180X
-	sensor.configureDefault();
+  sensor.configureDefault();
   #endif
-  sensor.setTimeout(1);
+  sensor.setTimeout(500);
+  sensor.startContinuous(20);
   
   resetServos();
   
@@ -168,59 +169,24 @@ void loop() {
 
 char checkColor(){
   readColor();
-  /*
-  double diffR = sqrt(sq(r-Rr) + sq(g-Rg) + sq(b-Rb));
-  double diffG = sqrt(sq(r-Gr) + sq(g-Gg) + sq(b-Gb));
-  double diffB = sqrt(sq(r-Br) + sq(g-Bg) + sq(b-Bb));
-  double diffK = sqrt(sq(r-Kr) + sq(g-Kg) + sq(b-Kb));
 
-  double c = min(min(diffR, diffG), min(diffB, diffK));
-	
-	if(c == diffR){
-		return 'r';
-	}
-	else if(c == diffG){
-		return 'g';
-	}
-	else if(c == diffB){
-		return 'b';
-	}
-	else{
-		return 'k';
-	}
-	
-*/
 
 //or we can check everything as a multiple of another. for g - b = xg, r = xg
 
 char small = 'k';
-//pick the smallest value	
+//pick the smallest value 
 if(r < g && r < b)
-	small = 'r';
+  small = 'r';
 else if (g < r && g < b)
-	small = 'g';
+  small = 'g';
 else if (b < g && b < r)
-	small = 'b';
+  small = 'b';
 if(r > 100 && g > 100 && b > 100) //the 100 values might need to be changed.
-	small = 'k';
-	return small;
-	
-	/*switch(small){
-		case 'r':
-		
-		break;
-		case 'g':
-		
-		break;
-		case 'b':
-		
-		break;
-		default:
-		
-		break;
-	}*/
-	
-	/*
+  small = 'k';
+  return small;
+  
+  
+  /*
   if (r < Gr && r < Br){
     return 'r';
   }
@@ -316,54 +282,66 @@ void resetServos(){
   arm.openClaw();
 }
 int checkDistance(){
-	//read 5 values, if any are over 1000 then nothing there.
-	//right now, the raw reading is fine if something is in front of it.
-	int range = 0;
-	range = sensor.readRangeSingleMillimeters();
-	if(!sensor.timeoutOccurred()){
-		return range;
-	}
-	return 3000;
-  int rangeArr[5] = {0,0,0,0,0};
+  //read 5 values, if any are over 1000 then nothing there.
+  int range = 0; //= sensor.readRangeContinuousMillimeters();
+  //range = sensor.readRangeSingleMillimeters();
+  //if(!sensor.timeoutOccurred()){
+    //return range;
+  //}
+  //return 3000;
+  int rangeArr[5] = {0,0,0,0,0}; //fill array with sensor readings
   for(int i = 0; i < 5; i++){
-    range += sensor.readRangeSingleMillimeters();
-	#ifdef Sensor_VL53L0X
-		rangeArr[i] = range;
-	#endif
-	delay(50);
+    //range += sensor.readRangeSingleMillimeters();
+    range += sensor.readRangeContinuousMillimeters();
+  #ifdef Sensor_VL53L0X
+    rangeArr[i] = range;
+  #endif
+  delay(20);
   }
   #ifdef Sensor_VL53L0X
-	range = 0;
-	for(int i = 0; i < 5; i++){
-		if(rangeArr[i] > 400){
-			range = 1000;
-			
-			//rangeArr[i] = 3000;
-		}
-		//range += rangeArr[i];
-	}
-	if(range != 1000){
-		range = rangeArr[3];
-	}
-	return range;
+  //range = 0;
+  
+  /*for(int i = 0; i < 5; i++){
+    if(rangeArr[i] > 400 || rangeArr[i] < 30){
+      range = 2000;
+      
+      //rangeArr[i] = 3000;
+    }
+    //range += rangeArr[i];
+  }*/
+  
+    //median of array
+    range = min(min(min(rangeArr[0], rangeArr[1]),min(rangeArr[2], rangeArr[3])),rangeArr[4]);
+    //range = rangeArr[3];
+  
+  int count = 0;
+  for(int i = 0; i < 5; i++){
+    if(rangeArr[i] > 1000){
+      count++;
+    }
+  }
+  if(count >= 3){
+    return 8888;
+  }
+  return range;
   #endif
   range /= 3;
 
   #ifdef Sensor_VL6180X
-	if(range > 100 && range <= 150){
-		range = ((range - 100) * 1.58) + 100;
-	}
-	else if (range > 150){
-		range = ((range - 150) * 8) + 150;
-	}
+  if(range > 100 && range <= 150){
+    range = ((range - 100) * 1.58) + 100;
+  }
+  else if (range > 150){
+    range = ((range - 150) * 8) + 150;
+  }
 
-	if(SP)
-	{
-		Serial.print(F("Distance: ")); 
-		Serial.println(range);
-	}
+  if(SP)
+  {
+    Serial.print(F("Distance: ")); 
+    Serial.println(range);
+  }
   
-	if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
+  if (sensor.timeoutOccurred()) { if(SP)Serial.print(F(" TIMEOUT")); }
   #endif
   
   return(range);
@@ -728,21 +706,21 @@ void enter_menu(){
               case 3:
                 Serial.println(F("Sort"));
                 blockCount[0] = 0;
-				blockCount[1] = 0;
-				blockCount[2] = 0; //reset the block count.
-				do {
-					pick();
-					if (over){
-						break;
-					}
-					leave();
+        blockCount[1] = 0;
+        blockCount[2] = 0; //reset the block count.
+        do {
+          pick();
+          if (over){
+            break;
+          }
+          leave();
                 } while (!over);
                 over = false;
-				resetServos();
-				Serial.println("BlockCount:");
-				Serial.println(blockCount[0]);
-				Serial.println(blockCount[1]);
-				Serial.println(blockCount[2]);
+        resetServos();
+        Serial.println("BlockCount:");
+        Serial.println(blockCount[0]);
+        Serial.println(blockCount[1]);
+        Serial.println(blockCount[2]);
                 break;
             }
           } 
@@ -759,8 +737,8 @@ void enter_menu(){
 void pick(){
   radar();
   if (!over){
-		 arm.openClaw();
-		 clawOpen = true;
+     arm.openClaw();
+     clawOpen = true;
          arm.moveArm(armHeight, 70 , closestDegree);
          delay(500);
          arm.moveArm(blockPickHeight, closestDistance + Distance_Offset, closestDegree);
@@ -773,38 +751,38 @@ void pick(){
   }
 }
 void leave(){
-	//the block is already in the claw
+  //the block is already in the claw
   int BlockDegree;
   int BlockDistance;
   switch(checkColor()){
     case 'k':
       BlockDegree = closestDegree; //leave it where it is (for now) UPDATE
-	  BlockDistance = 130;
+    BlockDistance = 130;
       break;
     case 'g':
       //BlockDegree = 100;
-	  BlockDistance = gP[blockCount[1]][0];
-	  BlockDegree = gP[blockCount[1]][1];
-	  blockCount[1]++;
+    BlockDistance = gP[blockCount[1]][0];
+    BlockDegree = gP[blockCount[1]][1];
+    blockCount[1]++;
       break;
     case 'b':
       //BlockDegree = 70;
-	  BlockDistance = bP[blockCount[2]][0];
-	  BlockDegree = bP[blockCount[2]][1];
-	  blockCount[2]++;
+    BlockDistance = bP[blockCount[2]][0];
+    BlockDegree = bP[blockCount[2]][1];
+    blockCount[2]++;
       break;
     case 'r':
       //BlockDegree = 20;
-	  BlockDistance = rP[blockCount[0]][0];
-	  BlockDegree = rP[blockCount[0]][1];
-	  blockCount[0]++;
+    BlockDistance = rP[blockCount[0]][0];
+    BlockDegree = rP[blockCount[0]][1];
+    blockCount[0]++;
       break;
   }
   delay(500);
          arm.moveArm(armHeight,armHeight,BlockDegree);//move to area
          delay(500);
          //arm.moveArm(blockDropHeight,armHeight,BlockDegree);//move down to the table - armHeight is being used as distance
-		 arm.moveArm(blockDropHeight, BlockDistance, BlockDegree);
+     arm.moveArm(blockDropHeight, BlockDistance, BlockDegree);
          delay(500);
          arm.openClaw();//release the block
          clawOpen = true;
