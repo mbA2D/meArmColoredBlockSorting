@@ -65,6 +65,7 @@ bool over = false;
 bool working = false;
 bool manually = false;
 long lastButtonMillis;
+bool bannedDegree[46];
 
 
 uint8_t blockCount[3] = {0,0,0};
@@ -182,7 +183,7 @@ else if (g <= r && g <= (b-5))
   small = 'g';
 else if (b <= g && b <= r)
   small = 'b';
-if(r > 150 && g > 120 && b > 160) //the 100 values might need to be changed.
+if(r > 100 && g > 100 && b > 100) //the 100 values might need to be changed.
   small = 'k';
   return small;
   
@@ -353,16 +354,22 @@ int checkDistance(){
 }
 void radar(){
   int dist;
+  bool degreeBanned = false;
   closestDistance = 700;
   arm.moveArm(armHeight, 70 , 135);
   delay(300);
-  for (int v = 135; v <= 180; v+= 2){//135 and 180 could be switched to defines if that would be useful.
+  for (int v = 135; v <= 180; v+= 3){//135 and 180 could be switched to defines if that would be useful.
     arm.moveBaseServo(v);
     dist = checkDistance();
-    if ((dist < closestDistance) && (dist < 300)){
+    for(int g = v - 2; g <= v+2; g++){
+      if (v >= 137 && v <= 178 && bannedDegree[180-g])
+        degreeBanned = true;
+    }
+    if ((dist < closestDistance) && (dist < 300) && !degreeBanned){
       closestDistance = dist;
       closestDegree = v;
     }
+    degreeBanned = false;
     delay(10);
   }
   if (closestDistance > 300){
@@ -750,7 +757,7 @@ void pick(){
 	 arm.moveArm(60,50,closestDegree);
      delay(500);
      arm.moveArm(blockPickHeight, closestDistance + Distance_Offset, closestDegree);
-     delay(500);
+     delay(700);
      arm.closeClaw();
      clawOpen = false;
      delay(500);
@@ -768,6 +775,7 @@ void leave(){
     case 'k':
       BlockDegree = closestDegree; //leave it where it is (for now) UPDATE
       BlockDistance = 130;
+      bannedDegree[180-closestDegree] = true;
       break;
     case 'g':
       //BlockDegree = 100;
